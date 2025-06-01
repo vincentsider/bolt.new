@@ -28,11 +28,11 @@ interface BaseChatProps {
 }
 
 const EXAMPLE_PROMPTS = [
-  { text: 'Build a todo app in React using Tailwind' },
-  { text: 'Build a simple blog using Astro' },
-  { text: 'Create a cookie consent form using Material UI' },
-  { text: 'Make a space invaders game' },
-  { text: 'How do I center a div?' },
+  { text: 'Create a financial portfolio tracking dashboard' },
+  { text: 'Build an expense management workflow with approval system' },
+  { text: 'Design an automated invoice processing pipeline' },
+  { text: 'Create a real-time stock market analytics dashboard' },
+  { text: 'Build a loan application workflow with risk assessment' },
 ];
 
 const TEXTAREA_MIN_HEIGHT = 76;
@@ -74,7 +74,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
             {!chatStarted && (
               <div id="intro" className="mt-[26vh] max-w-chat mx-auto">
                 <h1 className="text-5xl text-center font-bold text-bolt-elements-textPrimary mb-2">
-                  Where ideas begin
+                  Where workflows are created
                 </h1>
                 <p className="mb-4 text-center text-bolt-elements-textSecondary">
                   Bring ideas to life in seconds or get help on existing projects.
@@ -130,7 +130,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                       minHeight: TEXTAREA_MIN_HEIGHT,
                       maxHeight: TEXTAREA_MAX_HEIGHT,
                     }}
-                    placeholder="How can Bolt help you today?"
+                    placeholder="How can WorkflowHub help you today?"
                     translate="no"
                   />
                   <ClientOnly>
