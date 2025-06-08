@@ -11,6 +11,9 @@ import { workbenchStore } from '~/lib/stores/workbench';
 import { fileModificationsToHTML } from '~/utils/diff';
 import { cubicEasingFn } from '~/utils/easings';
 import { createScopedLogger, renderLogger } from '~/utils/logger';
+import { detectWorkflowIntent } from '~/lib/workflow/chat-to-workflow';
+import { useAuth } from '~/components/auth/AuthProvider';
+import { supabase } from '~/lib/supabase';
 import { BaseChat } from './BaseChat';
 
 const toastAnimation = cssTransition({
@@ -68,6 +71,7 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
   useShortcuts();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { user, organization } = useAuth();
 
   const [chatStarted, setChatStarted] = useState(initialMessages.length > 0);
 
@@ -150,6 +154,19 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
     const _input = messageInput || input;
 
     if (_input.length === 0 || isLoading) {
+      return;
+    }
+
+    // Check if the input is a workflow request BEFORE animation
+    const workflowDetection = detectWorkflowIntent(_input);
+    
+    if (workflowDetection.isWorkflowRequest && workflowDetection.suggestedWorkflow && user && organization) {
+      // Redirect to chat workflow builder instead of creating workflow here
+      const workflowName = workflowDetection.suggestedWorkflow.name;
+      const encodedInput = encodeURIComponent(_input);
+      
+      // Navigate to chat builder with the user's input as a parameter
+      window.location.href = `/workflows/chat-builder?input=${encodedInput}&name=${encodeURIComponent(workflowName)}`;
       return;
     }
 

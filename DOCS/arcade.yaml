@@ -1,0 +1,2477 @@
+basePath: /
+definitions:
+  auth.AuthorizationContext:
+    properties:
+      token:
+        type: string
+      user_info:
+        additionalProperties: true
+        type: object
+    type: object
+  auth.AuthorizationRequirement:
+    properties:
+      id:
+        description: one of ID or ProviderID must be set
+        type: string
+      oauth2:
+        $ref: '#/definitions/auth.OAuth2AuthorizationRequirement'
+      provider_id:
+        description: one of ID or ProviderID must be set
+        type: string
+      provider_type:
+        type: string
+    type: object
+  auth.AuthorizationResponse:
+    properties:
+      context:
+        $ref: '#/definitions/auth.AuthorizationContext'
+      id:
+        type: string
+      provider_id:
+        type: string
+      scopes:
+        items:
+          type: string
+        type: array
+      status:
+        allOf:
+        - $ref: '#/definitions/auth.AuthorizationStatus'
+        default: pending
+      url:
+        type: string
+      user_id:
+        type: string
+    type: object
+  auth.AuthorizationStatus:
+    enum:
+    - pending
+    - completed
+    - failed
+    type: string
+    x-enum-varnames:
+    - StatusPending
+    - StatusCompleted
+    - StatusFailed
+  auth.BindingType:
+    enum:
+    - static
+    - tenant
+    - project
+    - account
+    type: string
+    x-enum-varnames:
+    - StaticBindingType
+    - TenantBindingType
+    - ProjectBindingType
+    - AccountBindingType
+  auth.OAuth2AuthorizationRequirement:
+    properties:
+      scopes:
+        items:
+          type: string
+        type: array
+    type: object
+  schemas.AuthProviderCreateRequest:
+    properties:
+      description:
+        maxLength: 1000
+        type: string
+      id:
+        maxLength: 100
+        type: string
+      oauth2:
+        $ref: '#/definitions/schemas.OAuth2ConfigCreateRequest'
+      provider_id:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+    required:
+    - id
+    type: object
+  schemas.AuthProviderPatchRequest:
+    properties:
+      description:
+        maxLength: 1000
+        type: string
+      id:
+        maxLength: 100
+        type: string
+      oauth2:
+        $ref: '#/definitions/schemas.OAuth2ConfigPatchRequest'
+      provider_id:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+    type: object
+  schemas.AuthProviderResponse:
+    properties:
+      binding:
+        $ref: '#/definitions/auth.BindingType'
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      oauth2:
+        $ref: '#/definitions/schemas.OAuth2ConfigResponse'
+      provider_id:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  schemas.AuthorizationInitiationRequest:
+    properties:
+      auth_requirement:
+        $ref: '#/definitions/auth.AuthorizationRequirement'
+      user_id:
+        type: string
+    required:
+    - auth_requirement
+    - user_id
+    type: object
+  schemas.AuthorizationRequirement:
+    properties:
+      id:
+        type: string
+      oauth2:
+        $ref: '#/definitions/schemas.OAuth2AuthorizationRequirement'
+      provider_id:
+        type: string
+      provider_type:
+        type: string
+    type: object
+  schemas.AuthorizeToolRequest:
+    properties:
+      tool_name:
+        type: string
+      tool_version:
+        description: 'Optional: if not provided, any version is used'
+        type: string
+      user_id:
+        description: Required only when calling with an API key
+        type: string
+    required:
+    - tool_name
+    type: object
+  schemas.BindingInput:
+    properties:
+      type:
+        allOf:
+        - $ref: '#/definitions/schemas.BindingTypeInput'
+        enum:
+        - static
+        - tenant
+    required:
+    - type
+    type: object
+  schemas.BindingResponse:
+    properties:
+      id:
+        type: string
+      type:
+        $ref: '#/definitions/auth.BindingType'
+    type: object
+  schemas.BindingTypeInput:
+    enum:
+    - static
+    - tenant
+    type: string
+    x-enum-varnames:
+    - BindingTypeInputStatic
+    - BindingTypeInputTenant
+  schemas.ChatMessage:
+    properties:
+      content:
+        description: The content of the message.
+        type: string
+      name:
+        description: tool Name
+        type: string
+      role:
+        description: The role of the author of this message. One of system, user,
+          tool, or assistant.
+        type: string
+      tool_call_id:
+        description: tool_call_id
+        type: string
+      tool_calls:
+        description: tool calls if any
+        items:
+          $ref: '#/definitions/schemas.ModelToolCall'
+        type: array
+    required:
+    - content
+    - role
+    type: object
+  schemas.ChatRequest:
+    properties:
+      frequency_penalty:
+        type: number
+      logit_bias:
+        additionalProperties:
+          type: integer
+        description: |-
+          LogitBias is must be a token id string (specified by their token ID in the tokenizer), not a word string.
+          incorrect: `"logit_bias":{"You": 6}`, correct: `"logit_bias":{"1639": 6}`
+          refs: https://platform.openai.com/docs/api-reference/chat/create#chat/create-logit_bias
+        type: object
+      logprobs:
+        description: |-
+          LogProbs indicates whether to return log probabilities of the output tokens or not.
+          If true, returns the log probabilities of each output token returned in the content of message.
+          This option is currently not available on the gpt-4-vision-preview model.
+        type: boolean
+      max_tokens:
+        type: integer
+      messages:
+        items:
+          $ref: '#/definitions/schemas.ChatMessage'
+        type: array
+      model:
+        type: string
+      "n":
+        type: integer
+      parallel_tool_calls:
+        description: 'Disable the default behavior of parallel tool calls by setting
+          it: false.'
+        type: boolean
+      presence_penalty:
+        type: number
+      response_format:
+        $ref: '#/definitions/schemas.ResponseFormat'
+      seed:
+        type: integer
+      stop:
+        items:
+          type: string
+        type: array
+      stream:
+        type: boolean
+      stream_options:
+        allOf:
+        - $ref: '#/definitions/schemas.StreamOptions'
+        description: 'Options for streaming response. Only set this when you set stream:
+          true.'
+      temperature:
+        type: number
+      tool_choice:
+        description: This can be either a string or an ToolChoice object.
+      tools: {}
+      top_logprobs:
+        description: |-
+          TopLogProbs is an integer between 0 and 5 specifying the number of most likely tokens to return at each
+          token position, each with an associated log probability.
+          logprobs must be set to true if this parameter is used.
+        type: integer
+      top_p:
+        type: number
+      user:
+        type: string
+    type: object
+  schemas.ChatResponse:
+    properties:
+      choices:
+        items:
+          $ref: '#/definitions/schemas.Choice'
+        type: array
+      created:
+        type: integer
+      id:
+        type: string
+      model:
+        type: string
+      object:
+        type: string
+      system_fingerprint:
+        type: string
+      usage:
+        $ref: '#/definitions/schemas.Usage'
+    type: object
+  schemas.Choice:
+    properties:
+      finish_reason:
+        type: string
+      index:
+        type: integer
+      logprobs: {}
+      message:
+        $ref: '#/definitions/schemas.ChatMessage'
+      tool_authorizations:
+        items:
+          $ref: '#/definitions/auth.AuthorizationResponse'
+        type: array
+      tool_messages:
+        items:
+          $ref: '#/definitions/schemas.ChatMessage'
+        type: array
+    type: object
+  schemas.CreateModelRequest:
+    properties:
+      config: {}
+      id:
+        type: string
+      model_provider_type:
+        type: string
+    required:
+    - config
+    - id
+    - model_provider_type
+    type: object
+  schemas.CreateWorkerRequest:
+    properties:
+      enabled:
+        type: boolean
+      http:
+        $ref: '#/definitions/schemas.HTTPWorkerConfigRequest'
+      id:
+        maxLength: 100
+        type: string
+      mcp:
+        $ref: '#/definitions/schemas.MCPWorkerConfigCreateRequest'
+      type:
+        type: string
+    required:
+    - id
+    type: object
+  schemas.DashboardConfigResponse:
+    properties:
+      authority:
+        type: string
+      clientId:
+        type: string
+      coordinatorUri:
+        type: string
+      redirectUri:
+        type: string
+    type: object
+  schemas.DirectorConfigResponse:
+    properties:
+      enabled:
+        type: boolean
+      id:
+        type: string
+      maxTools:
+        type: integer
+    type: object
+  schemas.EngineConfigResponse:
+    properties:
+      dashboard:
+        $ref: '#/definitions/schemas.DashboardConfigResponse'
+      directors:
+        items:
+          $ref: '#/definitions/schemas.DirectorConfigResponse'
+        type: array
+    type: object
+  schemas.Error:
+    properties:
+      message:
+        type: string
+      name:
+        type: string
+    type: object
+  schemas.ExecuteToolRequest:
+    properties:
+      input:
+        allOf:
+        - $ref: '#/definitions/tool.RawInputs'
+        description: JSON input to the tool, if any
+      run_at:
+        description: 'The time at which the tool should be run (optional). If not
+          provided, the tool is run immediately. Format ISO 8601: YYYY-MM-DDTHH:MM:SS'
+        type: string
+      tool_name:
+        type: string
+      tool_version:
+        description: The tool version to use (optional). If not provided, any version
+          is used
+        type: string
+      user_id:
+        type: string
+    required:
+    - tool_name
+    type: object
+  schemas.ExecuteToolResponse:
+    properties:
+      duration:
+        type: number
+      execution_id:
+        type: string
+      execution_type:
+        type: string
+      finished_at:
+        type: string
+      id:
+        type: string
+      output:
+        $ref: '#/definitions/tool.ResponseOutput'
+      run_at:
+        type: string
+      status:
+        type: string
+      success:
+        description: |-
+          Whether the request was successful.
+          For immediately-executed requests, this will be true if the tool call succeeded.
+          For scheduled requests, this will be true if the request was scheduled successfully.
+        type: boolean
+    type: object
+  schemas.HTTPWorkerConfigRequest:
+    properties:
+      retry:
+        maximum: 10
+        minimum: 0
+        type: integer
+      secret:
+        maxLength: 100
+        type: string
+      timeout:
+        maximum: 4000
+        minimum: 1
+        type: integer
+      uri:
+        maxLength: 100
+        type: string
+    required:
+    - retry
+    - secret
+    - timeout
+    - uri
+    type: object
+  schemas.HTTPWorkerConfigResponse:
+    properties:
+      retry:
+        type: integer
+      secret:
+        $ref: '#/definitions/schemas.SecretResponse'
+      timeout:
+        type: integer
+      uri:
+        type: string
+    type: object
+  schemas.HTTPWorkerConfigUpdate:
+    properties:
+      retry:
+        maximum: 10
+        minimum: 0
+        type: integer
+      secret:
+        maxLength: 100
+        type: string
+      timeout:
+        maximum: 4000
+        minimum: 1
+        type: integer
+      uri:
+        maxLength: 100
+        type: string
+    type: object
+  schemas.HTTPWorkerTestConfig:
+    properties:
+      uri:
+        maxLength: 256
+        type: string
+    required:
+    - uri
+    type: object
+  schemas.HealthSchema:
+    properties:
+      healthy:
+        type: boolean
+    type: object
+  schemas.Input:
+    properties:
+      parameters:
+        items:
+          $ref: '#/definitions/schemas.Parameter'
+        minItems: 0
+        type: array
+    type: object
+  schemas.MCPWorkerConfigCreateRequest:
+    properties:
+      retry:
+        maximum: 10
+        minimum: 0
+        type: integer
+      timeout:
+        maximum: 4000
+        minimum: 1
+        type: integer
+      uri:
+        maxLength: 100
+        type: string
+    required:
+    - retry
+    - timeout
+    - uri
+    type: object
+  schemas.MCPWorkerConfigPatchRequest:
+    properties:
+      retry:
+        maximum: 10
+        minimum: 0
+        type: integer
+      timeout:
+        maximum: 4000
+        minimum: 1
+        type: integer
+      uri:
+        maxLength: 100
+        type: string
+    type: object
+  schemas.MCPWorkerConfigResponse:
+    properties:
+      retry:
+        type: integer
+      timeout:
+        type: integer
+      uri:
+        type: string
+    type: object
+  schemas.MCPWorkerTestConfig:
+    properties:
+      uri:
+        maxLength: 256
+        type: string
+    required:
+    - uri
+    type: object
+  schemas.ModelResponse:
+    properties:
+      binding:
+        $ref: '#/definitions/auth.BindingType'
+      config: {}
+      enabled:
+        type: boolean
+      id:
+        type: string
+      type:
+        type: string
+    type: object
+  schemas.ModelToolCall:
+    properties:
+      function:
+        $ref: '#/definitions/schemas.ToolFunctionCall'
+      id:
+        type: string
+      type:
+        $ref: '#/definitions/schemas.ToolType'
+    type: object
+  schemas.OAuth2AuthorizationRequirement:
+    properties:
+      scopes:
+        items:
+          type: string
+        type: array
+    type: object
+  schemas.OAuth2ConfigCreateRequest:
+    properties:
+      authorize_request:
+        $ref: '#/definitions/schemas.OAuth2RequestConfigCreateRequest'
+      client_id:
+        maxLength: 1000
+        type: string
+      client_secret:
+        maxLength: 1000
+        type: string
+      pkce:
+        $ref: '#/definitions/schemas.PKCEConfigCreateRequest'
+      refresh_request:
+        $ref: '#/definitions/schemas.OAuth2RequestConfigCreateRequest'
+      scope_delimiter:
+        enum:
+        - ','
+        - ' '
+        type: string
+      token_introspection_request:
+        $ref: '#/definitions/schemas.TokenIntrospectionCreateRequest'
+      token_request:
+        $ref: '#/definitions/schemas.OAuth2RequestConfigCreateRequest'
+      user_info_request:
+        $ref: '#/definitions/schemas.UserInfoRequestConfigCreateRequest'
+    required:
+    - client_id
+    type: object
+  schemas.OAuth2ConfigPatchRequest:
+    properties:
+      authorize_request:
+        $ref: '#/definitions/schemas.OAuth2RequestConfigPatchRequest'
+      client_id:
+        maxLength: 1000
+        type: string
+      client_secret:
+        maxLength: 1000
+        type: string
+      pkce:
+        $ref: '#/definitions/schemas.PKCEConfigPatchRequest'
+      refresh_request:
+        $ref: '#/definitions/schemas.OAuth2RequestConfigPatchRequest'
+      scope_delimiter:
+        enum:
+        - ','
+        - ' '
+        type: string
+      token_request:
+        $ref: '#/definitions/schemas.OAuth2RequestConfigPatchRequest'
+      user_info_request:
+        $ref: '#/definitions/schemas.UserInfoRequestConfigPatchRequest'
+    type: object
+  schemas.OAuth2ConfigResponse:
+    properties:
+      authorize_request:
+        $ref: '#/definitions/schemas.OAuth2RequestConfigResponse'
+      client_id:
+        type: string
+      client_secret:
+        $ref: '#/definitions/schemas.SecretResponse'
+      pkce:
+        $ref: '#/definitions/schemas.PKCEConfigResponse'
+      refresh_request:
+        $ref: '#/definitions/schemas.OAuth2RequestConfigResponse'
+      scope_delimiter:
+        type: string
+      token_introspection_request:
+        $ref: '#/definitions/schemas.TokenIntrospectionRequestConfigResponse'
+      token_request:
+        $ref: '#/definitions/schemas.OAuth2RequestConfigResponse'
+      user_info_request:
+        $ref: '#/definitions/schemas.UserInfoRequestConfigResponse'
+    type: object
+  schemas.OAuth2RequestConfigCreateRequest:
+    properties:
+      auth_method:
+        type: string
+      endpoint:
+        maxLength: 1000
+        type: string
+      method:
+        type: string
+      params:
+        additionalProperties:
+          type: string
+        type: object
+      request_content_type:
+        enum:
+        - application/x-www-form-urlencoded
+        - application/json
+        type: string
+      response_content_type:
+        enum:
+        - application/x-www-form-urlencoded
+        - application/json
+        type: string
+      response_map:
+        additionalProperties:
+          type: string
+        type: object
+    required:
+    - endpoint
+    type: object
+  schemas.OAuth2RequestConfigPatchRequest:
+    properties:
+      auth_method:
+        type: string
+      endpoint:
+        maxLength: 1000
+        type: string
+      method:
+        type: string
+      params:
+        additionalProperties:
+          type: string
+        type: object
+      request_content_type:
+        enum:
+        - application/x-www-form-urlencoded
+        - application/json
+        type: string
+      response_content_type:
+        enum:
+        - application/x-www-form-urlencoded
+        - application/json
+        type: string
+      response_map:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
+  schemas.OAuth2RequestConfigResponse:
+    properties:
+      auth_method:
+        type: string
+      endpoint:
+        type: string
+      expiration_format:
+        type: string
+      method:
+        type: string
+      params:
+        additionalProperties:
+          type: string
+        type: object
+      request_content_type:
+        type: string
+      response_content_type:
+        type: string
+      response_map:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
+  schemas.OXPWorkerConfigResponse:
+    properties:
+      retry:
+        type: integer
+      secret:
+        $ref: '#/definitions/schemas.SecretResponse'
+      timeout:
+        type: integer
+      uri:
+        type: string
+    type: object
+  schemas.OffsetPage-any:
+    properties:
+      items:
+        items: {}
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      page_count:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  schemas.OffsetPage-schemas_AuthProviderResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/schemas.AuthProviderResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      page_count:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  schemas.OffsetPage-schemas_ModelResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/schemas.ModelResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      page_count:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  schemas.OffsetPage-schemas_StoredSecretResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/schemas.StoredSecretResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      page_count:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  schemas.OffsetPage-schemas_ToolExecutionListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/schemas.ToolExecutionListResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      page_count:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  schemas.OffsetPage-schemas_ToolResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/schemas.ToolResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      page_count:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  schemas.OffsetPage-schemas_UserAuthProviderConnectionResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/schemas.UserAuthProviderConnectionResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      page_count:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  schemas.OffsetPage-schemas_WorkerResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/schemas.WorkerResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      page_count:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  schemas.Output:
+    properties:
+      available_modes:
+        items:
+          type: string
+        type: array
+      description:
+        type: string
+      value_schema:
+        $ref: '#/definitions/schemas.ValueSchema'
+    type: object
+  schemas.PKCEConfigCreateRequest:
+    properties:
+      code_challenge_method:
+        type: string
+      enabled:
+        type: boolean
+    type: object
+  schemas.PKCEConfigPatchRequest:
+    properties:
+      code_challenge_method:
+        type: string
+      enabled:
+        type: boolean
+    type: object
+  schemas.PKCEConfigResponse:
+    properties:
+      code_challenge_method:
+        type: string
+      enabled:
+        type: boolean
+    type: object
+  schemas.Parameter:
+    properties:
+      description:
+        type: string
+      inferrable:
+        default: true
+        type: boolean
+      name:
+        type: string
+      required:
+        type: boolean
+      value_schema:
+        $ref: '#/definitions/schemas.ValueSchema'
+    required:
+    - name
+    - value_schema
+    type: object
+  schemas.Requirements:
+    properties:
+      authorization:
+        $ref: '#/definitions/schemas.AuthorizationRequirement'
+      secrets:
+        items:
+          $ref: '#/definitions/schemas.SecretRequirement'
+        type: array
+    type: object
+  schemas.ResponseFormat:
+    properties:
+      type:
+        $ref: '#/definitions/schemas.ResponseFormatType'
+    type: object
+  schemas.ResponseFormatType:
+    enum:
+    - json_object
+    - text
+    type: string
+    x-enum-varnames:
+    - ResponseFormatJSON
+    - ResponseFormatText
+  schemas.SecretRequirement:
+    properties:
+      key:
+        type: string
+    required:
+    - key
+    type: object
+  schemas.SecretResponse:
+    properties:
+      binding:
+        $ref: '#/definitions/auth.BindingType'
+      editable:
+        type: boolean
+      exists:
+        type: boolean
+      hint:
+        type: string
+      value:
+        type: string
+    type: object
+  schemas.ServerInfoResponse:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      version:
+        type: string
+    type: object
+  schemas.StoredSecretResponse:
+    properties:
+      binding:
+        $ref: '#/definitions/schemas.BindingResponse'
+      created_at:
+        type: string
+      description:
+        type: string
+      hint:
+        type: string
+      id:
+        type: string
+      key:
+        type: string
+      last_accessed_at:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  schemas.StreamOptions:
+    properties:
+      include_usage:
+        description: |-
+          If set, an additional chunk will be streamed before the data: [DONE] message.
+          The usage field on this chunk shows the token usage statistics for the entire request,
+          and the choices field will always be an empty array.
+          All other chunks will also include a usage field, but with a null value.
+        type: boolean
+    type: object
+  schemas.TokenIntrospectionCreateRequest:
+    properties:
+      auth_method:
+        type: string
+      endpoint:
+        maxLength: 1000
+        type: string
+      method:
+        type: string
+      params:
+        additionalProperties:
+          type: string
+        type: object
+      request_content_type:
+        enum:
+        - application/x-www-form-urlencoded
+        - application/json
+        type: string
+      response_content_type:
+        enum:
+        - application/x-www-form-urlencoded
+        - application/json
+        type: string
+      response_map:
+        additionalProperties:
+          type: string
+        type: object
+      triggers:
+        $ref: '#/definitions/schemas.TokenIntrospectionTriggersCreateRequest'
+    required:
+    - endpoint
+    - triggers
+    type: object
+  schemas.TokenIntrospectionRequestConfigResponse:
+    properties:
+      auth_method:
+        type: string
+      enabled:
+        type: boolean
+      endpoint:
+        type: string
+      expiration_format:
+        type: string
+      method:
+        type: string
+      params:
+        additionalProperties:
+          type: string
+        type: object
+      request_content_type:
+        type: string
+      response_content_type:
+        type: string
+      response_map:
+        additionalProperties:
+          type: string
+        type: object
+      triggers:
+        $ref: '#/definitions/schemas.TokenIntrospectionRequestTriggersResponse'
+    type: object
+  schemas.TokenIntrospectionRequestTriggersResponse:
+    properties:
+      on_token_grant:
+        type: boolean
+      on_token_refresh:
+        type: boolean
+    type: object
+  schemas.TokenIntrospectionTriggersCreateRequest:
+    properties:
+      on_token_grant:
+        type: boolean
+      on_token_refresh:
+        type: boolean
+    type: object
+  schemas.ToolExecutionAttemptResponse:
+    properties:
+      finished_at:
+        type: string
+      id:
+        type: string
+      output:
+        $ref: '#/definitions/tool.ResponseOutput'
+      started_at:
+        type: string
+      success:
+        type: boolean
+      system_error_message:
+        type: string
+    type: object
+  schemas.ToolExecutionDetailResponse:
+    properties:
+      attempts:
+        items:
+          $ref: '#/definitions/schemas.ToolExecutionAttemptResponse'
+        type: array
+      created_at:
+        type: string
+      execution_status:
+        type: string
+      execution_type:
+        type: string
+      finished_at:
+        type: string
+      id:
+        type: string
+      input:
+        $ref: '#/definitions/tool.RawInputs'
+      run_at:
+        type: string
+      started_at:
+        type: string
+      tool_name:
+        type: string
+      toolkit_name:
+        type: string
+      toolkit_version:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  schemas.ToolExecutionListResponse:
+    properties:
+      created_at:
+        type: string
+      execution_status:
+        type: string
+      execution_type:
+        type: string
+      finished_at:
+        type: string
+      id:
+        type: string
+      run_at:
+        type: string
+      started_at:
+        type: string
+      tool_name:
+        type: string
+      toolkit_name:
+        type: string
+      toolkit_version:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  schemas.ToolFunctionCall:
+    properties:
+      arguments:
+        type: string
+      name:
+        type: string
+    type: object
+  schemas.ToolResponse:
+    properties:
+      description:
+        type: string
+      formatted_schema:
+        additionalProperties: {}
+        type: object
+      fully_qualified_name:
+        type: string
+      input:
+        $ref: '#/definitions/schemas.Input'
+      name:
+        type: string
+      output:
+        $ref: '#/definitions/schemas.Output'
+      qualified_name:
+        type: string
+      requirements:
+        $ref: '#/definitions/schemas.Requirements'
+      toolkit:
+        $ref: '#/definitions/schemas.ToolkitResponse'
+    required:
+    - fully_qualified_name
+    - input
+    - name
+    - qualified_name
+    - toolkit
+    type: object
+  schemas.ToolType:
+    enum:
+    - function
+    type: string
+    x-enum-varnames:
+    - ToolTypeFunction
+  schemas.ToolkitResponse:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      version:
+        type: string
+    required:
+    - name
+    type: object
+  schemas.UpdateModelConfigRequest:
+    properties:
+      api_key:
+        $ref: '#/definitions/schemas.UpdateSecretRequest'
+    type: object
+  schemas.UpdateModelRequest:
+    properties:
+      config:
+        $ref: '#/definitions/schemas.UpdateModelConfigRequest'
+    type: object
+  schemas.UpdateSecretRequest:
+    properties:
+      value:
+        type: string
+    required:
+    - value
+    type: object
+  schemas.UpdateWorkerRequest:
+    properties:
+      enabled:
+        type: boolean
+      http:
+        $ref: '#/definitions/schemas.HTTPWorkerConfigUpdate'
+      mcp:
+        $ref: '#/definitions/schemas.MCPWorkerConfigPatchRequest'
+    type: object
+  schemas.UpsertStoredSecretRequest:
+    properties:
+      binding:
+        $ref: '#/definitions/schemas.BindingInput'
+      description:
+        type: string
+      value:
+        maxLength: 1000
+        type: string
+    required:
+    - binding
+    - value
+    type: object
+  schemas.Usage:
+    properties:
+      completion_tokens:
+        type: integer
+      prompt_tokens:
+        type: integer
+      total_tokens:
+        type: integer
+    type: object
+  schemas.UserAuthProviderConnectionResponse:
+    properties:
+      connection_id:
+        type: string
+      connection_status:
+        type: string
+      id:
+        type: string
+      provider_description:
+        type: string
+      provider_id:
+        type: string
+      provider_user_info: {}
+      scopes:
+        items:
+          type: string
+        type: array
+      user_id:
+        type: string
+    type: object
+  schemas.UserInfoRequestConfigCreateRequest:
+    properties:
+      auth_method:
+        type: string
+      endpoint:
+        maxLength: 1000
+        type: string
+      method:
+        type: string
+      params:
+        additionalProperties:
+          type: string
+        type: object
+      request_content_type:
+        enum:
+        - application/x-www-form-urlencoded
+        - application/json
+        type: string
+      response_content_type:
+        enum:
+        - application/x-www-form-urlencoded
+        - application/json
+        type: string
+      response_map:
+        additionalProperties:
+          type: string
+        type: object
+      triggers:
+        $ref: '#/definitions/schemas.UserInfoRequestTriggersCreateRequest'
+    required:
+    - endpoint
+    - triggers
+    type: object
+  schemas.UserInfoRequestConfigPatchRequest:
+    properties:
+      auth_method:
+        type: string
+      endpoint:
+        maxLength: 1000
+        type: string
+      method:
+        type: string
+      params:
+        additionalProperties:
+          type: string
+        type: object
+      request_content_type:
+        enum:
+        - application/x-www-form-urlencoded
+        - application/json
+        type: string
+      response_content_type:
+        enum:
+        - application/x-www-form-urlencoded
+        - application/json
+        type: string
+      response_map:
+        additionalProperties:
+          type: string
+        type: object
+      triggers:
+        $ref: '#/definitions/schemas.UserInfoRequestTriggersPatchRequest'
+    type: object
+  schemas.UserInfoRequestConfigResponse:
+    properties:
+      auth_method:
+        type: string
+      endpoint:
+        type: string
+      expiration_format:
+        type: string
+      method:
+        type: string
+      params:
+        additionalProperties:
+          type: string
+        type: object
+      request_content_type:
+        type: string
+      response_content_type:
+        type: string
+      response_map:
+        additionalProperties:
+          type: string
+        type: object
+      triggers:
+        $ref: '#/definitions/schemas.UserInfoRequestTriggersResponse'
+    type: object
+  schemas.UserInfoRequestTriggersCreateRequest:
+    properties:
+      on_token_grant:
+        type: boolean
+      on_token_refresh:
+        type: boolean
+    type: object
+  schemas.UserInfoRequestTriggersPatchRequest:
+    properties:
+      on_token_grant:
+        type: boolean
+      on_token_refresh:
+        type: boolean
+    type: object
+  schemas.UserInfoRequestTriggersResponse:
+    properties:
+      on_token_grant:
+        type: boolean
+      on_token_refresh:
+        type: boolean
+    type: object
+  schemas.ValueSchema:
+    properties:
+      enum:
+        items:
+          type: string
+        type: array
+      inner_val_type:
+        type: string
+      val_type:
+        type: string
+    required:
+    - val_type
+    type: object
+  schemas.WorkerHealthResponse:
+    properties:
+      enabled:
+        type: boolean
+      healthy:
+        type: boolean
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+  schemas.WorkerResponse:
+    properties:
+      binding:
+        $ref: '#/definitions/schemas.BindingResponse'
+      enabled:
+        type: boolean
+      http:
+        $ref: '#/definitions/schemas.HTTPWorkerConfigResponse'
+      id:
+        type: string
+      mcp:
+        $ref: '#/definitions/schemas.MCPWorkerConfigResponse'
+      oxp:
+        $ref: '#/definitions/schemas.OXPWorkerConfigResponse'
+      type:
+        $ref: '#/definitions/schemas.WorkerType'
+    type: object
+  schemas.WorkerTestRequest:
+    properties:
+      http:
+        $ref: '#/definitions/schemas.HTTPWorkerTestConfig'
+      mcp:
+        $ref: '#/definitions/schemas.MCPWorkerTestConfig'
+      type:
+        type: string
+    required:
+    - type
+    type: object
+  schemas.WorkerTestResponse:
+    properties:
+      message:
+        type: string
+      serverInfo:
+        $ref: '#/definitions/schemas.ServerInfoResponse'
+      success:
+        type: boolean
+    type: object
+  schemas.WorkerType:
+    enum:
+    - http
+    - mcp
+    - unknown
+    type: string
+    x-enum-varnames:
+    - WorkerTypeHTTP
+    - WorkerTypeMCP
+    - WorkerTypeUnknown
+  tool.Error:
+    properties:
+      additional_prompt_content:
+        type: string
+      can_retry:
+        type: boolean
+      developer_message:
+        type: string
+      message:
+        type: string
+      retry_after_ms:
+        type: integer
+    required:
+    - message
+    type: object
+  tool.Log:
+    properties:
+      level:
+        type: string
+      message:
+        type: string
+      subtype:
+        type: string
+    required:
+    - level
+    - message
+    type: object
+  tool.RawInputs:
+    additionalProperties: true
+    type: object
+  tool.ResponseOutput:
+    properties:
+      authorization:
+        $ref: '#/definitions/auth.AuthorizationResponse'
+      error:
+        $ref: '#/definitions/tool.Error'
+      logs:
+        items:
+          $ref: '#/definitions/tool.Log'
+        type: array
+      value: {}
+    type: object
+externalDocs:
+  description: Documentation
+  url: https://docs.arcade.dev
+host: api.arcade.dev
+info:
+  contact:
+    email: contact@arcade.dev
+    name: Arcade
+    url: https://arcade.dev
+  description: Reference Documentation for Arcade Engine API
+  license:
+    name: Proprietary
+    url: https://arcade.dev/license
+  title: Arcade API
+  version: 0.1.0
+paths:
+  /v1/auth/authorize:
+    post:
+      consumes:
+      - application/json
+      description: Starts the authorization process for given authorization requirements
+      operationId: initiate-authorization
+      parameters:
+      - description: Bearer (API Key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Authorization request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/schemas.AuthorizationInitiationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.AuthorizationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      security:
+      - Bearer: []
+      summary: Initiate Authorization
+      tags:
+      - Authorization
+  /v1/auth/status:
+    get:
+      description: |-
+        Checks the status of an ongoing authorization process for a specific tool.
+        If 'wait' param is present, does not respond until either the auth status becomes completed or the timeout is reached.
+      operationId: auth-status
+      parameters:
+      - description: Bearer (API Key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Authorization ID
+        in: query
+        name: id
+        required: true
+        type: string
+      - description: Timeout in seconds (max 59)
+        in: query
+        name: wait
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.AuthorizationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      security:
+      - Bearer: []
+      summary: Check Authorization Status
+      tags:
+      - Authorization
+  /v1/chat/completions:
+    post:
+      consumes:
+      - application/json
+      description: Interact with language models via OpenAI's chat completions API
+      operationId: llm-chat
+      parameters:
+      - description: Bearer (API Key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Request Data
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/schemas.ChatRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/schemas.ChatResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      summary: Language model chat
+      tags:
+      - LLM
+  /v1/config:
+    get:
+      description: Get the Engine configuration
+      operationId: engine-config
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/schemas.EngineConfigResponse'
+      summary: Get Engine config
+      tags:
+      - Operations
+  /v1/formatted_tools:
+    get:
+      description: Returns a page of tools from the engine configuration, optionally
+        filtered by toolkit, formatted for a specific provider
+      operationId: tools-list-formatted
+      parameters:
+      - description: Bearer (API Key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Toolkit name
+        in: query
+        name: toolkit
+        type: string
+      - description: 'Number of items to return (default: 25, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset from the start of the list (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      - description: Provider format
+        in: query
+        name: format
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/schemas.OffsetPage-any'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      security:
+      - Bearer: []
+      summary: List Formatted Static Tools
+      tags:
+      - Tools
+  /v1/formatted_tools/{name}:
+    get:
+      description: Returns the formatted tool specification for a specific tool, given
+        a provider
+      operationId: tool-spec-formatted
+      parameters:
+      - description: Bearer (API Key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Tool name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Provider format
+        in: query
+        name: format
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      summary: Get Formatted Tool Specification
+      tags:
+      - Tools
+  /v1/health:
+    get:
+      description: Check if Arcade Engine is healthy
+      operationId: arcade-health
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/schemas.HealthSchema'
+      summary: Engine health check
+      tags:
+      - Operations
+  /v1/mcp:
+    delete:
+      consumes:
+      - application/json
+      description: Model Context Protocol endpoint supporting Streamable HTTP transport
+      operationId: mcp-endpoint
+      parameters:
+      - description: Bearer (API Key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      - text/event-stream
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "202":
+          description: Accepted
+          schema: {}
+        "204":
+          description: No Content
+          schema: {}
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      security:
+      - Bearer: []
+      summary: MCP Endpoint
+      tags:
+      - MCP
+    get:
+      consumes:
+      - application/json
+      description: Model Context Protocol endpoint supporting Streamable HTTP transport
+      operationId: mcp-endpoint
+      parameters:
+      - description: Bearer (API Key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      - text/event-stream
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "202":
+          description: Accepted
+          schema: {}
+        "204":
+          description: No Content
+          schema: {}
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      security:
+      - Bearer: []
+      summary: MCP Endpoint
+      tags:
+      - MCP
+    post:
+      consumes:
+      - application/json
+      description: Model Context Protocol endpoint supporting Streamable HTTP transport
+      operationId: mcp-endpoint
+      parameters:
+      - description: Bearer (API Key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      - text/event-stream
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "202":
+          description: Accepted
+          schema: {}
+        "204":
+          description: No Content
+          schema: {}
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      security:
+      - Bearer: []
+      summary: MCP Endpoint
+      tags:
+      - MCP
+  /v1/scheduled_tools:
+    get:
+      description: Returns a page of scheduled tool executions
+      operationId: tool-scheduled-list
+      parameters:
+      - description: Bearer (API Key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 'Number of items to return (default: 25, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset from the start of the list (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/schemas.OffsetPage-schemas_ToolExecutionListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      summary: List scheduled tool executions
+      tags:
+      - Tools
+  /v1/scheduled_tools/{id}:
+    get:
+      description: Returns the details for a specific scheduled tool execution
+      operationId: tool-scheduled-get
+      parameters:
+      - description: Bearer (API Key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Scheduled execution ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/schemas.ToolExecutionDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      summary: Get scheduled tool execution details
+      tags:
+      - Tools
+  /v1/tools:
+    get:
+      description: Returns a page of tools from the engine configuration, optionally
+        filtered by toolkit
+      operationId: tools-list-static
+      parameters:
+      - description: Bearer (API Key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Toolkit name
+        in: query
+        name: toolkit
+        type: string
+      - description: 'Number of items to return (default: 25, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset from the start of the list (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      - collectionFormat: csv
+        description: Comma separated tool formats that will be included in the response.
+        in: query
+        items:
+          enum:
+          - arcade
+          - openai
+          - anthropic
+          type: string
+        name: include_format
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/schemas.OffsetPage-schemas_ToolResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      security:
+      - Bearer: []
+      summary: List Static Tools
+      tags:
+      - Tools
+  /v1/tools/{name}:
+    get:
+      description: Returns the arcade tool specification for a specific tool
+      operationId: tool-spec
+      parameters:
+      - description: Bearer (API Key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Tool name
+        in: path
+        name: name
+        required: true
+        type: string
+      - collectionFormat: csv
+        description: Comma separated tool formats that will be included in the response.
+        in: query
+        items:
+          enum:
+          - arcade
+          - openai
+          - anthropic
+          type: string
+        name: include_format
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/schemas.ToolResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      summary: Get Arcade Tool Specification
+      tags:
+      - Tools
+  /v1/tools/authorize:
+    post:
+      consumes:
+      - application/json
+      description: Authorizes a user for a specific tool by name
+      operationId: tool-authorize
+      parameters:
+      - description: Bearer (API Key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Tool authorization request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/schemas.AuthorizeToolRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.AuthorizationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      security:
+      - Bearer: []
+      summary: Authorize Tool
+      tags:
+      - Tools
+  /v1/tools/execute:
+    post:
+      consumes:
+      - application/json
+      description: Executes a tool by name and arguments
+      operationId: tool-execute
+      parameters:
+      - description: Bearer (API Key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Tool execution request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/schemas.ExecuteToolRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/schemas.ExecuteToolResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      security:
+      - Bearer: []
+      summary: Execute Tool
+      tags:
+      - Tools
+  /v1/workers:
+    get:
+      description: List all workers with their definitions
+      operationId: workers-list
+      parameters:
+      - description: 'Number of items to return (default: 25, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset from the start of the list (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      - description: Bearer (API key or API token)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/schemas.OffsetPage-schemas_WorkerResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      summary: List all workers
+      tags:
+      - Admin
+    post:
+      consumes:
+      - application/json
+      description: Create a worker
+      operationId: workers-create
+      parameters:
+      - description: Bearer (API key or API token)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Worker configuration to create
+        in: body
+        name: workerConfig
+        required: true
+        schema:
+          $ref: '#/definitions/schemas.CreateWorkerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/schemas.WorkerResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      summary: Create a worker
+      tags:
+      - Admin
+  /v1/workers/{id}:
+    delete:
+      description: Delete a worker
+      operationId: workers-delete
+      parameters:
+      - description: Bearer (API key or API token)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Worker ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      summary: Delete a worker
+      tags:
+      - Admin
+    get:
+      description: Get a worker by ID
+      operationId: workers-get
+      parameters:
+      - description: Bearer (API key or API token)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Worker ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/schemas.WorkerResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      summary: Get a worker by ID
+      tags:
+      - Admin
+    patch:
+      consumes:
+      - application/json
+      description: Update a worker
+      operationId: workers-update
+      parameters:
+      - description: Bearer (API key or API token)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Worker ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Worker configuration to update
+        in: body
+        name: workerConfig
+        required: true
+        schema:
+          $ref: '#/definitions/schemas.UpdateWorkerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/schemas.WorkerResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      summary: Update a worker
+      tags:
+      - Admin
+  /v1/workers/{id}/health:
+    get:
+      description: Get the health of a worker
+      operationId: workers-health
+      parameters:
+      - description: Bearer (API key or API token)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Worker ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/schemas.WorkerHealthResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      summary: Get the health of a worker
+      tags:
+      - Admin
+  /v1/workers/{id}/tools:
+    get:
+      description: Returns a page of tools
+      operationId: tools-list
+      parameters:
+      - description: Bearer (API Key)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Worker ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 'Number of items to return (default: 25, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset from the start of the list (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/schemas.OffsetPage-schemas_ToolResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      summary: List Tools
+      tags:
+      - Admin
+  /v1/workers/test:
+    post:
+      consumes:
+      - application/json
+      description: Test a worker connection before adding it to the system
+      operationId: workers-test
+      parameters:
+      - description: Bearer (API key or API token)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Minimal worker configuration to test
+        in: body
+        name: testConfig
+        required: true
+        schema:
+          $ref: '#/definitions/schemas.WorkerTestRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/schemas.WorkerTestResponse'
+        "400":
+          description: Invalid request body or URI
+          schema:
+            $ref: '#/definitions/schemas.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schemas.Error'
+      summary: Test a worker connection
+      tags:
+      - Admin
+schemes:
+- http
+- https
+securityDefinitions:
+  Bearer:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

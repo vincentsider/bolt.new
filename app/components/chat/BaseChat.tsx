@@ -28,11 +28,11 @@ interface BaseChatProps {
 }
 
 const EXAMPLE_PROMPTS = [
-  { text: 'Create a financial portfolio tracking dashboard' },
-  { text: 'Build an expense management workflow with approval system' },
-  { text: 'Design an automated invoice processing pipeline' },
-  { text: 'Create a real-time stock market analytics dashboard' },
-  { text: 'Build a loan application workflow with risk assessment' },
+  { text: 'Create a workflow to approve expense reports over $500' },
+  { text: 'Automate invoice processing with email notifications' },
+  { text: 'Build a customer onboarding workflow with document review' },
+  { text: 'Create a workflow for loan application approval process' },
+  { text: 'Automate daily report generation and email delivery' },
 ];
 
 const TEXTAREA_MIN_HEIGHT = 76;
