@@ -37,467 +37,95 @@ Platform availability
 User satisfaction
 ≥ 4.5 / 5 CSAT
 
-5. Target Users & Personas 
-Primary Persona: The Systems & Process Optimizer
-Role:
-Head of Operations, Operations Manager, Process Improvement Lead, Business Analyst, System Implementation Manager.
-
-
-Demographics:
-Age: 30–50
-
-
-Typically mid-to-senior level
-
-
-Industry: Financial Services (Banking, Asset Management, Fund Administration, Insurance, Trusts)
-
-
-Pain Points:
-Frustrated by slow and expensive development cycles.
-
-
-Difficulty quickly adapting workflows to regulatory changes.
-
-
-Rigid legacy systems that limit operational agility.
-
-
-High reliance on costly external developers.
-
-
-Goals & Motivations:
-Rapidly streamline operations.
-
-
-Reduce overhead and complexity in workflows.
-
-
-Minimize operational risk through standardized processes.
-
-
-Enhance business agility to respond quickly to market changes.
-
-
-Achieve measurable cost reductions and operational efficiencies.
-
-
-Typical Background:
-Extensive experience with traditional workflow platforms (e.g., SharePoint, custom-developed workflows, legacy ERP or CRM systems).
-
-
-Strong technical understanding without necessarily being hands-on coders.
-
-
-Experienced in managing cross-functional process improvement projects.
-
-
-Key Selling Points for WorkflowHub:
-No-code simplicity enabling internal management and agility.
-
-
-Dramatic reduction in time-to-deployment (hours instead of months).
-
-
-Modular, scalable design to adapt quickly as processes evolve.
-
-
-Seamless integration with existing enterprise systems.
-
-
-Secondary Persona: IT & Systems Integration Leader
-Role:
-CIO, CTO, Head of IT, Enterprise Architect, Systems Integration Manager.
-
-
-Demographics:
-Age: 35–55
-
-
-Senior management or executive level.
-
-
-Industry: Financial Services, regulated sectors.
-
-
-Pain Points:
-Managing complex, fragmented IT landscapes.
-
-
-High costs and extensive timelines associated with system integrations.
-
-
-Ensuring secure, reliable operations while managing multiple vendors.
-
-
-Goals & Motivations:
-Simplify the integration landscape through unified, easy-to-manage automation solutions.
-
-
-Ensure robust security and compliance across all platforms.
-
-
-Reduce dependency on external developers and IT consultants.
-
-
-Increase agility and speed of delivering IT-led improvements.
-
-
-Typical Background:
-Deep expertise in enterprise-grade system integrations.
-
-
-Experience managing large, cross-system technology projects.
-
-
-Understands security, compliance, scalability, and performance in enterprise solutions.
-
-
-Key Selling Points for WorkflowHub:
-Enterprise-grade security and compliance standards.
-
-
-Seamless integration layer connecting disparate core systems.
-
-
-Significant cost savings on external developer fees.
-
-
-Easy internal maintenance and updates via no-code workflows.
-
-
-Tertiary Persona: Innovation & Change Champion
-Role:
-Chief Innovation Officer, Digital Transformation Lead, Head of Business Change, Project Manager.
-
-
-Demographics:
-Age: 28–45
-
-
-Mid-to-senior level
-
-
-Industry: Financial services and regulated industries seeking innovation.
-
-
-Pain Points:
-Difficulty driving change due to internal resistance and rigid IT structures.
-
-
-Frustration with slow response times to new regulatory or market demands.
-
-
-Need for demonstrable, quick wins in digital transformation.
-
-
-Goals & Motivations:
-Quickly demonstrate the tangible benefits of digital transformation.
-
-
-Empower teams through accessible, impactful technology solutions.
-
-
-Achieve high adoption rates by simplifying user experience.
-
-
-Position themselves as thought leaders driving significant operational improvements.
-
-
-Typical Background:
-Experience leading innovative projects or digital transformation initiatives.
-
-
-Often acts as the bridge between technology and business teams.
-
-
-Skilled at advocating for new technology solutions internally.
-
-
-Key Selling Points for WorkflowHub:
-Rapid deployment delivering tangible quick wins.
-
-
-Demonstrable reduction in operational complexity and costs.
-
-
-Enhanced user engagement through intuitive interfaces and "wow" moments.
-
-
-Empowering teams to rapidly adapt without lengthy training
-End User Persona: The Workflow-Enabled Professional
-Role:
-Administrative Assistant, Client Services Executive, Compliance Analyst, Middle Office Specialist, Operations Associate.
-
-
-Demographics:
-Age: 25–45
-
-
-Typically junior to mid-level staff.
-
-
-Industry: Financial services, fund administration, banking, insurance.
-
-
-Pain Points:
-Manual data entry is time-consuming and error-prone.
-
-
-Tracking process status is difficult and inconsistent.
-
-
-Constant follow-ups and email chains to get approvals or next steps.
-
-
-Lack of visibility into where tasks are in the process.
-
-
-Duplicative work across systems due to lack of integration.
-
-
-Goals & Motivations:
-Complete tasks efficiently with minimal manual steps.
-
-
-Reduce time spent chasing approvals and tracking statuses.
-
-
-Have clear visibility into where a process stands and what is needed from them.
-
-
-Increase productivity and spend time on higher-value tasks.
-
-
-Reduce stress and frustration caused by fragmented processes.
-
-
-Typical Background:
-Proficient in using enterprise tools (e.g. Excel, CRM systems).
-
-
-Familiar with basic process steps but not with system building or coding.
-
-
-Often responsible for handling operational tasks that are part of larger processes.
-
-
-Key Benefits from WorkflowHub:
-Automation: Routine data entry and manual tasks are handled automatically, freeing up time for higher-value work.
-
-
-Management Information (MI): Real-time dashboards showing where tasks are in the process, what is pending, and any bottlenecks—improving transparency and planning.
-
-
-Efficiency: Faster process completion means fewer delays and less frustration.
-
-
-Reduced Errors: Automated validations reduce mistakes, ensuring consistent quality.
-
-
-Accountability & Oversight: Clear process steps and approvals make it easy to see what needs to be done and by whom.
-
-
-Simplified Communication: Automated notifications and status updates reduce the need for endless email chains and manual chasing.
-
-Persona Summary (for easy reference):
-Persona
-Primary Needs
-Key Pain Points
-Why WorkflowHub?
-Systems & Process Optimizer
-Efficiency, Agility, Cost Savings
-Slow deployment, costly developers
-Rapid, no-code, modular workflows
-IT & Systems Integration Leader
-Security, Integration, Manageability
-Fragmented systems, high costs
-Secure, integrated, easy maintenance
-Innovation & Change Champion
-Quick Wins, Adoption, Transformation
-Internal resistance, slow processes
-Rapid deployment, clear ROI, innovation
-Workflow-Enabled Professional
-Simplicity, Transparency, Productivity
-Manual data entry, lack of visibility
-Automation, real-time MI dashboards, reduced manual work
-
-
-6. Core Design Principles
+5. Core Design Principles
 No‑Code First: Natural‑language builder + guided WF specification forms.
-
-
 Feels Like Magic: Every touch‑point feels “magic” (instant previews, one‑click deploy). Our job is to create those “wow” moments.
-
-
 Self‑Sufficient: Firms operate without in‑house devs; minimal external developer costs. 
-
-
 Modular & Reusable: Library of Steps, Components, Triggers, Actions, Functions to ensure consistent high quality results. 
-
-
 Enterprise‑Grade: Security, compliance, audit, version control from day 0.
 
 
-7. How It Works - Workflow Builder (End‑to‑End Flow)
+6. How It Works - Workflow Builder (End‑to‑End Flow)
 Stage
 User Experience
 Behind the Scenes
-1. Describe
-Upload / type plain‑language spec
+a. Describe
+Upload / type plain‑language spec in chat interface similar to lovable or bolt.new
 AI parses intent, maps to workflow blocks
-2. Confirm Structure
+b. Confirm Structure
 UI shows proposed Capture → Review → Approve → Update flow
 Pulls from Step Library
-3. Configure
+c. Configure
 Guided prompts for fields, approvers, triggers
 Builder draws from Component / Trigger / Action libs
-4. Draft UI
+d. Draft UI
 Real‑time split‑screen preview
 Generates forms, logic, integrations
-5. Test & QA
+e. Test & QA
 One‑click simulation + AI QA agents
 Auto‑gen test data, security lint, performance checks
-6. Publish
+f. Publish
 Approvals & version stamp
 Deploys to prod tenant; audit trail logged
 
-8. Key Features & Functionality
+7. Key Features & Functionality
 8.1 Workflow Builder
 Split‑screen prompt‑and‑preview (Lovable pattern)
-
-
 Multi‑turn chat refinement; instant visual updates
-
-
 Library search & drag‑drop for advanced users 
-
-
 Automatic version control & diff viewer
 
-
-8.2 Modular Workflow Steps
-Capture – data, docs, checklist with OCR & validation
-
-
+7.2 Modular Workflow Steps
+Capture – data, docs, checklist with OCR (claude vision) & validation
 Review – configurable 4‑eyes, inline comments, routing
-
-
 Approval – single / multi‑level, conditional rules, e‑sign
-
-
 Update – read/write to systems via API / automation
 
 
-8.3 Component & Trigger Libraries
+7.3 Component & Trigger Libraries
 30+ data‑capture components (text, dropdown, currency, file‑upload…)
-
-
 Triggers: manual start, scheduled, API event, system webhook, conditional logic
-
-
 Actions: create record, update record, send notification, generate doc, start child WF
-
-
 Functions: loops, branching, calculations, lookups
 
-
-8.4 Testing & Quality Assurance
+7.4 Testing & Quality Assurance
 AI test‑agent executes all paths, validates data rules
-
-
-Security agent scans for PII exposure, RBAC lapses
-
-
+Security agent scans for PII exposure, RBAC lapses (based on openai agents sdk)
 Performance agent load‑tests ↔ scalability baseline
 
 
-8.5 Reporting & MI
+7.5 Reporting & MI
 Real‑time dashboards (status, SLA breaches, workload, cycle‑time)
-
-
 Export to BI tools (Power BI, Tableau)
-
-
 API for embedding MI in portals
 
 
-9. System Integrations
-TBC - how will we integrate with core systems 
-10. User Interface
+8. System Integrations
+it integrate with core systems via arcade.dev sdk
+9. User Interface
 Builder UI – left prompt panel, right live preview; publish / save / share.
-
-
 Execution UI – responsive task inbox, guided forms, document viewer, audit pane, activity timeline.
-
-
 Admin Console – integrations, RBAC, environment mgmt, usage analytics.
 
 
-11. Security & Compliance
+10. Security & Compliance
 Role‑based access (AD / Azure AD sync)
-
-
 Encryption at rest (AES‑256) & in transit (TLS 1.3)
-
-
 Full audit log & immutable version history
-
-
 SOC 2 Type II & ISO 27001 roadmap
-
-
 Data‑residency options: single‑tenant cloud, private cloud, on‑prem
 
 
-12. Technical Architecture
+11. Technical Architecture
 Frontend: React + TypeScript, Tailwind, PWAs
-
-
 Backend: Node.js/TypeScript micro‑services; PostgreSQL (Supabase) for data; Redis for queues
-
-
 AI Services: OpenAI GPT‑4 for NL parsing; Claude Vision for OCR; internal RAG for library mapping
-
-
-Execution Sandbox: Docker‑based E2B containers with per‑workflow isolation
-
-
+Execution Sandbox: webcontainer
 Event Bus: NATS or Kafka for real‑time events
-
-
 Deployment: Kubernetes‑based SaaS cluster + customer‑isolated namespaces
 
 
-
-14. Non‑Functional Requirements
-Category
-Requirement
-Performance
-< 5 s builder response; < 3 s API calls
-Scalability
-1000+ WF runs/day; 100+ concurrent users
-Availability
-99.5 % uptime SLA
-Usability
-WCAG 2.1 AA; mobile responsive
-Security
-Annual penetration tests; RBAC; encryption
-
-15. Onboarding & Deployment
-Kick‑off Workshop – connect AD, choose hosting model, map first high‑value use‑case.
-
-
-Integration Wizard – AI‑guided connector setup (API keys, endpoints).
-
-
-First Workflow Build – coach builds live in session; target ≤ 2 h to publish.
-
-
-Enablement – self‑service academy, templated playbooks, community forum.
-
-
-16. Roles & Licensing
+12. Roles & Licensing
 Role
 Capability
 Licence
@@ -514,26 +142,18 @@ Admin
 Security, integrations
 Included with Builder
 
-17. Risk & Mitigation
+13. Risk & Mitigation
 AI parsing errors → Manual override & guided form mode.
-
-
 Integration downtime → Retry queues + circuit breakers.
-
-
 Data‑privacy concerns → Private‑cloud & on‑prem options.
 
 
-18. Future Roadmap
-AI Agents 
 
-
-Fully automated cost centres 
 
 
 '''
 DETAILS>
-Authentication & Authorisation
+-Authentication & Authorisation
 Layer
 v1 Plan
 Why
@@ -550,8 +170,7 @@ Field-level security
 PG row/column policies + React front-end guards
 Covers “need-to-know” data controls.
 
-
-4. Compliance Must-Haves (Jersey / Offshore FS)
+-Compliance Must-Haves (Jersey / Offshore FS)
 Requirement
 Source
 Implementation Note
@@ -575,46 +194,14 @@ OSP & AML guidance
 • audit_entries table append-only + WORM blob archive after 90 days
 
 
-5. Non-Functional Targets (based on 20 builders • 100 users • 1 500 runs / month)
-Metric
-Target
-Form load
-< 2 s (p95)
-Workflow creation
-< 30 s end-to-end
-Throughput
-5 000 runs / month headroom (3× v1 forecast)
-Uptime
-99.5 % SaaS SLA
-RPO / RTO
-15 min / 2 h
-Accessibility
-WCAG 2.1 AA
 
 
-6. Security Controls
-TLS 1.2+ everywhere; HSTS enabled.
-
-
-AES-256 at rest (Azure Storage & supabase TDE).
-
-
-Secrets in Azure Key Vault; rotated every 90 days.
-
-
-Annual CREST-approved penetration test.
-
-
-CIS Azure Benchmark automated in pipeline.
-
-
-
-7. Core Functionality Lock-In for v1 (MVP)
+-Core Functionality Lock-In for v1 (MVP)
 Area
 Included
 Natural-language builder (text prompt → wireframe)
 ✔
-Component library (20 core + SharePointLink)
+Component library (30 core + SharePointLink)
 ✔
 Trigger library (manual, schedule, vPoint create)
 ✔
