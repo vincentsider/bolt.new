@@ -5,6 +5,7 @@ import { supabase } from '~/lib/supabase'
 import type { Workflow, WorkflowStep } from '~/types/database'
 import { SimpleWorkflowCanvas } from '~/components/workflows/builder/SimpleWorkflowCanvas'
 import { WorkflowChat } from '~/components/workflows/builder/WorkflowChat'
+import { WorkflowStepTabs } from '~/components/workflows/WorkflowStepTabs'
 import type { Node } from 'reactflow'
 
 interface BoltStyleCodeViewProps {
@@ -749,7 +750,7 @@ export default function ChatWorkflowBuilderPage() {
                 onClick={() => setCurrentView('canvas')}
                 className={`px-3 py-2 text-sm ${currentView === 'canvas' ? 'bg-blue-600 text-white' : 'bg-white hover:bg-gray-50'}`}
               >
-                🎨 Canvas
+                📋 4-Step Builder
               </button>
               <button
                 onClick={() => setCurrentView('code')}
@@ -809,130 +810,11 @@ export default function ChatWorkflowBuilderPage() {
           )}
           
           {currentView === 'canvas' && (
-            /* Visual Canvas Builder */
-            <>
-              <div className="flex-1">
-                <SimpleWorkflowCanvas
-                  key={`workflow-canvas-${workflowId || 'new'}`}
-                  initialSteps={workflow.config?.steps || []}
-                  onStepsChange={handleStepsChange}
-                  onNodeSelect={handleNodeSelect}
-                />
-              </div>
-
-              {/* Bottom Panel - Step Configuration */}
-              {selectedNode && (
-                <div className="h-80 bg-white border-t border-gray-200">
-                  <div className="p-4 h-full overflow-y-auto">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-medium text-gray-900">Step Configuration</h3>
-                      <button
-                        onClick={() => setSelectedNode(null)}
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Step Name</label>
-                        <input
-                          type="text"
-                          value={selectedNode.data?.name || ''}
-                          onChange={(e) => updateSelectedNodeData('name', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Enter step name"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Step Type</label>
-                        <select
-                          value={selectedNode.data?.type || 'capture'}
-                          onChange={(e) => updateSelectedNodeData('type', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="capture">📝 Capture</option>
-                          <option value="review">👀 Review</option>
-                          <option value="approve">✅ Approve</option>
-                          <option value="update">🔄 Update</option>
-                          <option value="condition">🔀 Condition</option>
-                          <option value="parallel">⚡ Parallel</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                        <textarea
-                          value={selectedNode.data?.description || ''}
-                          onChange={(e) => updateSelectedNodeData('description', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          rows={3}
-                          placeholder="Describe what this step does..."
-                        />
-                      </div>
-                      
-                      {/* Step-specific configuration */}
-                      {selectedNode.data?.type === 'approve' && (
-                        <div className="space-y-3">
-                          <h4 className="font-medium text-gray-900">Approval Settings</h4>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Auto-approve threshold ($)</label>
-                            <input
-                              type="number"
-                              value={selectedNode.data?.config?.autoApprove?.threshold || 500}
-                              onChange={(e) => updateSelectedNodeConfig(['autoApprove', 'threshold'], parseFloat(e.target.value))}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              min="0"
-                              step="0.01"
-                            />
-                          </div>
-                          <div className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={selectedNode.data?.config?.autoApprove?.enabled || false}
-                              onChange={(e) => updateSelectedNodeConfig(['autoApprove', 'enabled'], e.target.checked)}
-                              className="mr-2"
-                            />
-                            <label className="text-sm text-gray-700">Enable auto-approval</label>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {selectedNode.data?.type === 'capture' && (
-                        <div className="space-y-3">
-                          <h4 className="font-medium text-gray-900">Form Settings</h4>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Form Fields (JSON)</label>
-                            <textarea
-                              value={JSON.stringify(selectedNode.data?.config?.form?.fields || [], null, 2)}
-                              onChange={(e) => {
-                                try {
-                                  const fields = JSON.parse(e.target.value)
-                                  updateSelectedNodeConfig(['form', 'fields'], fields)
-                                } catch (error) {
-                                  // Invalid JSON, ignore
-                                }
-                              }}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs"
-                              rows={4}
-                              placeholder='[{"name": "field1", "type": "text", "required": true}]'
-                            />
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div className="pt-3 border-t border-gray-200">
-                        <button
-                          onClick={() => deleteSelectedNode()}
-                          className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm"
-                        >
-                          Delete Step
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
+            /* 4-Step Workflow Builder */
+            <WorkflowStepTabs
+              workflow={workflow}
+              onWorkflowUpdate={handleWorkflowUpdate}
+            />
           )}
           
           {currentView === 'code' && (

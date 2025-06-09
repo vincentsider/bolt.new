@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useAuth } from '~/components/auth/AuthProvider'
 import type { Workflow, WorkflowStep } from '~/types/database'
+import { TriggerMapper } from '~/lib/ai/trigger-mapper'
+import type { TriggerConversation, TriggerTemplate } from '~/types/trigger-library'
 
 interface WorkflowChatProps {
   workflow: Partial<Workflow>
@@ -16,10 +18,22 @@ interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  triggerConversation?: TriggerConversation
 }
 
 export function WorkflowChat({ workflow, onWorkflowUpdate, onCodeUpdate, onFilesUpdate, initialInput, forceFresh = false }: WorkflowChatProps) {
-  const { user } = useAuth()
+  const { user, organization } = useAuth()
+  const [triggerMapper, setTriggerMapper] = useState<TriggerMapper | null>(null)
+  const [activeTriggerConversation, setActiveTriggerConversation] = useState<TriggerConversation | null>(null)
+  
+  // Initialize TriggerMapper
+  useEffect(() => {
+    if (organization?.id) {
+      const mapper = new TriggerMapper(organization.id)
+      setTriggerMapper(mapper)
+    }
+  }, [organization?.id])
+  
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     // Determine if this is a new workflow creation or continuing existing workflow
     const isNewWorkflow = !workflow.id && (!workflow.config?.steps || workflow.config.steps.length === 0)
@@ -183,22 +197,14 @@ What would you like me to do with this workflow?`,
         requestAnimationFrame(() => {
           console.log('🔥 AUTO-SUBMITTING: Processing workflow request immediately...');
           
-          // Create synthetic form submission event
-          const syntheticEvent = {
-            preventDefault: () => {},
-            currentTarget: { checkValidity: () => true },
-            target: { reset: () => {} }
-          } as React.FormEvent;
-          
-          // Call handleSubmit directly with the initial input
-          handleSubmit(syntheticEvent);
+          // Call handleSubmit directly without synthetic event
+          handleSubmitDirect();
         });
       }
     }
   }, [initialInput])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmitDirect = async () => {
     if (!input.trim() || isLoading) return
 
     const userMessage: ChatMessage = {
@@ -225,9 +231,123 @@ What would you like me to do with this workflow?`,
       console.log('Sending workflow chat request...')
       console.log('Current conversation has', messages.length + 1, 'messages')
       
+      // Check if user is asking about triggers
+      let triggerQuestions: string[] = []
+      let detectedTrigger: TriggerTemplate | undefined
+      
+      if (triggerMapper) {
+        const triggerSuggestion = await triggerMapper.suggestTriggers(input.trim())
+        
+        if (triggerSuggestion.autoSelected) {
+          detectedTrigger = triggerSuggestion.autoSelected
+          console.log('Auto-selected trigger:', detectedTrigger.name)
+          
+          // Generate proactive questions for the AI to ask
+          triggerQuestions = triggerMapper.generateProactiveQuestions(input.trim(), detectedTrigger)
+          
+          if (triggerQuestions.length > 0) {
+            console.log('Generated trigger questions:', triggerQuestions)
+          }
+        }
+      }
+      
+      // Rest of the submission logic...
+      await processWorkflowRequest(input.trim(), triggerQuestions, detectedTrigger)
+    } catch (error) {
+      console.error('Chat error:', error)
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'Sorry, I encountered an error processing your request. Please try again.',
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, errorMessage])
+    } finally {
+      setIsLoading(false)
+      setIsGeneratingWorkflow(false)
+      
+      // Reset progress info
+      setProgressInfo({
+        step: '',
+        percentage: 0,
+        startTime: null,
+        estimatedCompletion: null
+      })
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await handleSubmitDirect()
+  }
+
+  const processWorkflowRequest = async (userInput: string, triggerQuestions: string[], detectedTrigger?: TriggerTemplate) => {
+
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: input.trim(), // Display the clean user message without file modifications
+      timestamp: new Date()
+    }
+
+    setMessages(prev => [...prev, userMessage])
+    setInput('')
+    setIsLoading(true)
+    setIsGeneratingWorkflow(true)
+    
+    // Initialize progress tracking
+    setProgressInfo({
+      step: 'Starting generation',
+      percentage: 0,
+      startTime: Date.now(),
+      estimatedCompletion: null
+    })
+
+    try {
+      console.log('Sending workflow chat request...')
+      console.log('Current conversation has', messages.length + 1, 'messages')
+      
+      // Check if user is asking about triggers
+      let triggerQuestions: string[] = []
+      let detectedTrigger: TriggerTemplate | undefined
+      
+      if (triggerMapper) {
+        const triggerSuggestion = await triggerMapper.suggestTriggers(input.trim())
+        
+        if (triggerSuggestion.autoSelected) {
+          detectedTrigger = triggerSuggestion.autoSelected
+          console.log('Auto-selected trigger:', detectedTrigger.name)
+          
+          // Generate proactive questions for the AI to ask
+          triggerQuestions = triggerMapper.generateProactiveQuestions(input.trim(), detectedTrigger)
+          
+          if (triggerQuestions.length > 0) {
+            console.log('Generated trigger questions:', triggerQuestions)
+          }
+        }
+      }
+      
       // Check if this is a modification request (not a new workflow creation)
       const isModificationRequest = messages.length > 1 && Object.keys(workflowFiles).length > 0
       let userMessageContent = input.trim()
+      
+      // Check if this is a step-specific request
+      const stepKeywords = {
+        'capture': ['capture', 'step 1', 'first step', 'data collection', 'form fields', 'input'],
+        'review': ['review', 'step 2', 'second step', 'reviewer', 'validation'],
+        'approval': ['approval', 'approve', 'step 3', 'third step', 'approver', 'sign off'],
+        'update': ['update', 'step 4', 'fourth step', 'integration', 'system', 'automat']
+      }
+      
+      let detectedStep = null
+      const lowerInput = input.toLowerCase()
+      
+      for (const [step, keywords] of Object.entries(stepKeywords)) {
+        if (keywords.some(keyword => lowerInput.includes(keyword))) {
+          detectedStep = step
+          break
+        }
+      }
       
       // If this is a modification request, include existing files in the message context
       if (isModificationRequest) {
@@ -249,7 +369,11 @@ What would you like me to do with this workflow?`,
           messages: [
             ...messages.map(m => ({ role: m.role, content: m.content })),
             { role: 'user', content: userMessageContent }
-          ]
+          ],
+          triggerContext: {
+            detectedTrigger,
+            triggerQuestions
+          }
         }),
       })
 
@@ -473,61 +597,63 @@ The workflow is visible in the live preview on the right. What would you like me
     let percentage = 0
     let message = ''
 
-    // ENHANCED: Conversational progress messages with percentage tracking
-    if (cleanedContent.length < 100) {
+    // Better progress calculation based on content and time
+    const contentLength = cleanedContent.length
+    
+    // More realistic progress steps based on content milestones
+    if (contentLength < 100) {
       step = 'Analyzing requirements'
       percentage = 5
       message = '🤖 Analyzing your workflow requirements and getting started...'
-    } else if (cleanedContent.includes('package.json')) {
+    } else if (cleanedContent.includes('package.json') && !cleanedContent.includes('server.js')) {
       step = 'Setting up project foundation'
       percentage = 15
       message = `📦 Setting up the project foundation with all the dependencies your workflow needs...`
-    } else if (cleanedContent.includes('server.js')) {
+    } else if (cleanedContent.includes('server.js') && !cleanedContent.includes('views/') && !cleanedContent.includes('.html')) {
       step = 'Building backend server'
       percentage = 35
       message = `⚙️ Building the backend server that will handle your workflow logic and data processing...`
-    } else if (cleanedContent.includes('views/') || cleanedContent.includes('.html')) {
+    } else if ((cleanedContent.includes('views/') || cleanedContent.includes('.html')) && !cleanedContent.includes('css') && !cleanedContent.includes('style')) {
       step = 'Creating user interfaces'
       percentage = 55
       message = `🎨 Creating beautiful, professional forms and user interfaces for your workflow...`
-    } else if (cleanedContent.includes('nodemailer') || cleanedContent.includes('email')) {
-      step = 'Setting up notifications'
-      percentage = 70
-      message = `📧 Setting up email notifications so everyone stays informed about workflow progress...`
-    } else if (cleanedContent.includes('database') || cleanedContent.includes('sqlite')) {
-      step = 'Building database structure'
-      percentage = 60
-      message = `🗄️ Building the database structure to securely store and manage your workflow data...`
-    } else if (cleanedContent.includes('css') || cleanedContent.includes('style')) {
+    } else if ((cleanedContent.includes('css') || cleanedContent.includes('style')) && !cleanedContent.includes('boltArtifact')) {
       step = 'Adding professional styling'
-      percentage = 80
+      percentage = 75
       message = `💅 Adding professional styling to make your workflow look polished and user-friendly...`
     } else if (cleanedContent.includes('boltArtifact')) {
       step = 'Finalizing workflow'
       percentage = 95
       message = `✨ Putting the finishing touches on your workflow application - almost ready!`
     } else {
+      // Progressive content-based calculation for unknown stages
+      const basePercentage = 20
+      const contentProgress = Math.min(Math.floor(contentLength / 2000) * 15, 70)
+      percentage = Math.min(basePercentage + contentProgress, 90)
       step = 'Generating workflow application'
-      percentage = Math.min(10 + Math.floor(cleanedContent.length / 1000) * 5, 90)
       message = `🔄 Generating your complete workflow application with all the features you requested...`
     }
 
-    // Update progress state
+    // Update progress state with better time calculation
     setProgressInfo(prev => {
       const now = Date.now()
       const startTime = prev.startTime || now
       const elapsed = now - startTime
       
-      // Estimate completion based on current progress and elapsed time
+      // Only show estimated completion if we have meaningful progress and reasonable time
       let estimatedCompletion = null
-      if (percentage > 10 && elapsed > 2000) { // Only estimate after 2 seconds and 10% progress
-        const estimatedTotal = (elapsed / percentage) * 100
-        estimatedCompletion = startTime + estimatedTotal
+      
+      // Don't show estimates if stuck at low percentage for too long
+      const timePerPercentage = elapsed / percentage
+      if (percentage > prev.percentage && timePerPercentage < 5000) { // Progress is moving and reasonable
+        const remainingPercentage = 100 - percentage
+        const estimatedRemaining = remainingPercentage * timePerPercentage
+        estimatedCompletion = now + estimatedRemaining
       }
 
       return {
         step,
-        percentage,
+        percentage: Math.max(percentage, prev.percentage), // Never go backwards
         startTime,
         estimatedCompletion
       }
@@ -966,11 +1092,13 @@ The workflow is visible in the live preview on the right. What would you like me
                     {/* Progress Details */}
                     <div className="flex items-center justify-between text-sm text-bolt-elements-textSecondary">
                       <span>{progressInfo.percentage}% complete</span>
-                      {progressInfo.estimatedCompletion && (
+                      {progressInfo.estimatedCompletion ? (
                         <span>
                           ~{Math.max(0, Math.ceil((progressInfo.estimatedCompletion - Date.now()) / 1000))}s remaining
                         </span>
-                      )}
+                      ) : progressInfo.startTime && (Date.now() - progressInfo.startTime) > 10000 ? (
+                        <span>Processing...</span>
+                      ) : null}
                     </div>
                   </div>
                 </div>
