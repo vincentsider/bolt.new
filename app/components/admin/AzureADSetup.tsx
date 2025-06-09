@@ -103,7 +103,7 @@ export function AzureADSetup({ onComplete }: AzureADSetupProps) {
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
             />
-            <p className="mt-1 text-sm text-gray-500">Found in Azure AD > Properties > Tenant ID</p>
+            <p className="mt-1 text-sm text-gray-500">Found in Azure AD &gt; Properties &gt; Tenant ID</p>
           </div>
 
           <div>
@@ -120,7 +120,7 @@ export function AzureADSetup({ onComplete }: AzureADSetupProps) {
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
             />
-            <p className="mt-1 text-sm text-gray-500">Found in App registrations > Your App > Application ID</p>
+            <p className="mt-1 text-sm text-gray-500">Found in App registrations &gt; Your App &gt; Application ID</p>
           </div>
 
           <div>
@@ -137,7 +137,7 @@ export function AzureADSetup({ onComplete }: AzureADSetupProps) {
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Enter your client secret"
             />
-            <p className="mt-1 text-sm text-gray-500">Generate in App registrations > Your App > Certificates & secrets</p>
+            <p className="mt-1 text-sm text-gray-500">Generate in App registrations &gt; Your App &gt; Certificates &amp; secrets</p>
           </div>
 
           <div>

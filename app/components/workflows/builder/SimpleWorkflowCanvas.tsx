@@ -1,6 +1,6 @@
-import * as React from 'react'
-import { useState, useEffect, useCallback } from 'react'
-import ReactFlow, {
+import React, { useState, useEffect, useCallback } from 'react'
+import {
+  ReactFlow,
   Background,
   Controls,
   MiniMap,
@@ -10,7 +10,8 @@ import ReactFlow, {
   type Node,
   type Edge,
   type Connection,
-  type NodeTypes
+  type NodeTypes,
+  ReactFlowProvider
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import type { WorkflowStep } from '~/types/database'
@@ -200,87 +201,89 @@ export function SimpleWorkflowCanvas({
   }, [])
 
   return (
-    <div className="h-full w-full flex bg-gray-50">
-      {/* Left Panel - Component Palette */}
-      <div className="w-64 bg-white border-r border-gray-200 p-4 overflow-y-auto">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Workflow Components</h3>
-        <div className="space-y-3">
-          {COMPONENT_PALETTE.map((item) => (
-            <div
-              key={item.type}
-              className="p-3 border border-gray-200 rounded-lg cursor-grab hover:shadow-md transition-shadow bg-white"
-              draggable
-              onDragStart={(e) => onDragStart(e, item.type)}
-            >
-              <div className="flex items-center space-x-3">
-                <div className={`w-10 h-10 ${item.color} rounded-lg flex items-center justify-center text-white text-lg`}>
-                  {item.icon}
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium text-gray-900 text-sm">{item.label}</div>
-                  <div className="text-xs text-gray-600 mt-1">{item.description}</div>
+    <ReactFlowProvider>
+      <div className="h-full w-full flex bg-gray-50">
+        {/* Left Panel - Component Palette */}
+        <div className="w-64 bg-white border-r border-gray-200 p-4 overflow-y-auto">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Workflow Components</h3>
+          <div className="space-y-3">
+            {COMPONENT_PALETTE.map((item) => (
+              <div
+                key={item.type}
+                className="p-3 border border-gray-200 rounded-lg cursor-grab hover:shadow-md transition-shadow bg-white"
+                draggable
+                onDragStart={(e) => onDragStart(e, item.type)}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className={`w-10 h-10 ${item.color} rounded-lg flex items-center justify-center text-white text-lg`}>
+                    {item.icon}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900 text-sm">{item.label}</div>
+                    <div className="text-xs text-gray-600 mt-1">{item.description}</div>
+                  </div>
                 </div>
               </div>
+            ))}
+          </div>
+          
+          {steps.length > 0 && (
+            <div className="mt-6 p-3 bg-blue-50 rounded-lg">
+              <div className="text-sm text-blue-800">
+                <div className="font-medium">✨ {steps.length} Steps Created</div>
+                <div className="text-xs mt-1">Drag components above to add more steps</div>
+              </div>
             </div>
-          ))}
+          )}
         </div>
-        
-        {steps.length > 0 && (
-          <div className="mt-6 p-3 bg-blue-50 rounded-lg">
-            <div className="text-sm text-blue-800">
-              <div className="font-medium">✨ {steps.length} Steps Created</div>
-              <div className="text-xs mt-1">Drag components above to add more steps</div>
-            </div>
-          </div>
-        )}
-      </div>
 
-      {/* Right Panel - React Flow Canvas */}
-      <div className="flex-1 relative">
-        {steps.length > 0 ? (
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeClick={onNodeClick}
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-            nodeTypes={nodeTypes}
-            fitView
-            fitViewOptions={{ padding: 0.1 }}
-          >
-            <Background color="#f1f5f9" size={1} />
-            <Controls />
-            <MiniMap
-              nodeColor={(node) => {
-                const paletteItem = COMPONENT_PALETTE.find(item => item.type === node.data?.type)
-                return paletteItem?.color.replace('bg-', '#') || '#6b7280'
-              }}
-              className="bg-white border border-gray-200"
-            />
-          </ReactFlow>
-        ) : (
-          <div 
-            className="h-full flex items-center justify-center bg-gray-50"
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-          >
-            <div className="text-center space-y-4 max-w-md">
-              <div className="text-6xl mb-4">🎨</div>
-              <div className="text-xl font-semibold text-gray-700">Visual Workflow Builder</div>
-              <p className="text-gray-600">
-                Start by chatting with the AI to generate a workflow, or drag components from the left panel to build manually.
-              </p>
-              <div className="text-sm text-gray-500 space-y-1">
-                <div>💬 Chat: "Create an expense approval workflow"</div>
-                <div>🎯 Or drag & drop components to design manually</div>
+        {/* Right Panel - React Flow Canvas */}
+        <div className="flex-1 relative">
+          {steps.length > 0 ? (
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeClick={onNodeClick}
+              onDrop={onDrop}
+              onDragOver={onDragOver}
+              nodeTypes={nodeTypes}
+              fitView
+              fitViewOptions={{ padding: 0.1 }}
+            >
+              <Background color="#f1f5f9" size={1} />
+              <Controls />
+              <MiniMap
+                nodeColor={(node) => {
+                  const paletteItem = COMPONENT_PALETTE.find(item => item.type === node.data?.type)
+                  return paletteItem?.color.replace('bg-', '#') || '#6b7280'
+                }}
+                className="bg-white border border-gray-200"
+              />
+            </ReactFlow>
+          ) : (
+            <div 
+              className="h-full flex items-center justify-center bg-gray-50"
+              onDrop={onDrop}
+              onDragOver={onDragOver}
+            >
+              <div className="text-center space-y-4 max-w-md">
+                <div className="text-6xl mb-4">🎨</div>
+                <div className="text-xl font-semibold text-gray-700">Visual Workflow Builder</div>
+                <p className="text-gray-600">
+                  Start by chatting with the AI to generate a workflow, or drag components from the left panel to build manually.
+                </p>
+                <div className="text-sm text-gray-500 space-y-1">
+                  <div>💬 Chat: "Create an expense approval workflow"</div>
+                  <div>🎯 Or drag & drop components to design manually</div>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </ReactFlowProvider>
   )
 }

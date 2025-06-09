@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from '@remix-run/react'
 import { WorkflowList } from '~/components/workflows/WorkflowList'
 import { WorkflowEditor } from '~/components/workflows/WorkflowEditor'
 import { useAuth } from '~/components/auth/AuthProvider'
@@ -6,12 +7,17 @@ import type { Workflow } from '~/types/database'
 
 export default function WorkflowsPage() {
   const { user, loading } = useAuth()
+  const navigate = useNavigate()
   const [view, setView] = useState<'list' | 'create' | 'edit'>('list')
   const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | undefined>()
 
   function handleCreateNew() {
     setSelectedWorkflow(undefined)
     setView('create')
+  }
+
+  function handleCreateWithAgent() {
+    navigate('/workflows/multi-agent-builder')
   }
 
   function handleEditWorkflow(workflow: Workflow) {
@@ -55,6 +61,7 @@ export default function WorkflowsPage() {
           <WorkflowList
             onWorkflowSelect={handleEditWorkflow}
             onCreateNew={handleCreateNew}
+            onCreateWithAgent={handleCreateWithAgent}
           />
         )}
         

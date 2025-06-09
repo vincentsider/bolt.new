@@ -1,4 +1,4 @@
-import type { WorkflowStep, Workflow } from '~/types/database'
+import type { WorkflowStep, Workflow, ArcadeToolConfig } from '~/types/database'
 
 export interface WorkflowDetection {
   isWorkflowRequest: boolean
@@ -17,16 +17,21 @@ export interface WorkflowEntity {
   metadata?: Record<string, any>
 }
 
-// Keywords that indicate workflow creation intent
+// Keywords that indicate workflow creation intent - EXPANDED for better detection
 const WORKFLOW_KEYWORDS = [
   'workflow', 'automate', 'automation', 'process', 'flow', 'pipeline',
   'trigger', 'when', 'if', 'then', 'approve', 'approval', 'review', 'notify',
   'schedule', 'daily', 'weekly', 'monthly', 'integrate', 'connect',
   'send email', 'create task', 'update data', 'validate', 'check',
-  'expense', 'invoice', 'report', 'request', 'submit', 'create a workflow'
+  'expense', 'invoice', 'report', 'request', 'submit', 'create a workflow',
+  // EXPANDED: Common form/business process keywords
+  'form', 'feedback', 'survey', 'application', 'registration', 'contact',
+  'onboarding', 'customer', 'employee', 'user', 'collect', 'gather',
+  'manage', 'track', 'handle', 'submit', 'processing', 'business',
+  'step', 'steps', 'sequence', 'order', 'procedure'
 ]
 
-// Common workflow patterns
+// Common workflow patterns - EXPANDED for better detection
 const WORKFLOW_PATTERNS = [
   /when\s+(.+?)\s+then\s+(.+)/i,
   /if\s+(.+?)\s+then\s+(.+)/i,
@@ -34,37 +39,46 @@ const WORKFLOW_PATTERNS = [
   /create\s+(?:a\s+)?workflow\s+(?:to\s+|that\s+|for\s+)?(.+)/i,
   /i\s+(?:want|need)\s+(?:to\s+)?automate\s+(.+)/i,
   /help\s+me\s+(?:automate|create\s+a\s+workflow\s+for)\s+(.+)/i,
-  /build\s+(?:a\s+)?workflow\s+(?:to\s+|that\s+|for\s+)?(.+)/i
+  /build\s+(?:a\s+)?workflow\s+(?:to\s+|that\s+|for\s+)?(.+)/i,
+  // EXPANDED: Common business form patterns
+  /create\s+(?:a\s+)?(.+?)\s+form/i,
+  /build\s+(?:a\s+)?(.+?)\s+form/i,
+  /make\s+(?:a\s+)?(.+?)\s+form/i,
+  /generate\s+(?:a\s+)?(.+?)\s+form/i,
+  /i\s+need\s+(?:a\s+)?(.+?)\s+(?:form|system|process)/i,
+  /create\s+(?:a\s+)?(.+?)\s+(?:application|system|process)/i,
+  /build\s+(?:a\s+)?(.+?)\s+(?:application|system|process)/i,
+  /design\s+(?:a\s+)?(.+?)\s+(?:form|workflow|process)/i
 ]
 
-// Step type mappings
-const STEP_TYPE_MAPPING = {
-  'email': 'notification',
-  'send email': 'notification',
-  'notify': 'notification',
-  'notification': 'notification',
+// Step type mappings - only valid WorkflowStep types
+const STEP_TYPE_MAPPING: Record<string, 'capture' | 'review' | 'approve' | 'update' | 'condition' | 'parallel'> = {
+  'email': 'update',
+  'send email': 'update',
+  'notify': 'update',
+  'notification': 'update',
   'approve': 'approve',
   'approval': 'approve',
   'review': 'review',
   'check': 'condition',
   'validate': 'condition',
   'condition': 'condition',
-  'wait': 'delay',
-  'delay': 'delay',
-  'schedule': 'delay',
+  'wait': 'condition',
+  'delay': 'condition',
+  'schedule': 'condition',
   'update': 'update',
   'create': 'capture',
   'input': 'capture',
   'form': 'capture',
   'data': 'capture',
-  'transform': 'transform',
-  'convert': 'transform',
-  'calculate': 'transform',
+  'transform': 'update',
+  'convert': 'update',
+  'calculate': 'update',
   'parallel': 'parallel',
   'simultaneously': 'parallel',
-  'human task': 'human_task',
-  'manual': 'human_task',
-  'task': 'human_task'
+  'human task': 'review',
+  'manual': 'review',
+  'task': 'review'
 }
 
 /**
@@ -94,8 +108,15 @@ export function detectWorkflowIntent(input: string): WorkflowDetection {
     lowerInput.includes(keyword.toLowerCase())
   )
   
-  // Calculate confidence based on keyword matches
-  let confidence = Math.min(keywordMatches.length * 0.25, 1.0)
+  // Calculate confidence based on keyword matches - ENHANCED scoring
+  let confidence = Math.min(keywordMatches.length * 0.3, 1.0)
+  
+  // Special boost for form-related requests (common business need)
+  if (lowerInput.includes('form') || lowerInput.includes('feedback') || 
+      lowerInput.includes('contact') || lowerInput.includes('survey') ||
+      lowerInput.includes('application') || lowerInput.includes('registration')) {
+    confidence = Math.max(confidence, 0.8)
+  }
   
   // Check for workflow patterns
   let matchedPattern: RegExpMatchArray | null = null
@@ -111,7 +132,8 @@ export function detectWorkflowIntent(input: string): WorkflowDetection {
     }
   }
   
-  const isWorkflowRequest = confidence > 0.2
+  // LOWERED threshold for better detection of business processes
+  const isWorkflowRequest = confidence > 0.15
   
   if (!isWorkflowRequest) {
     return { isWorkflowRequest: false, confidence: 0 }
@@ -262,8 +284,8 @@ function generateWorkflowSteps(input: string, entities: WorkflowEntity[]): Workf
         ],
         required: true
       },
-      nextSteps: [{ stepId: 'step-2', condition: null }],
-      arcadeTool: null
+      nextSteps: [{ stepId: 'step-2' }],
+      arcadeTool: undefined
     })
     
     // Check if amount threshold is mentioned
@@ -281,10 +303,10 @@ function generateWorkflowSteps(input: string, entities: WorkflowEntity[]): Workf
         value: threshold
       },
       nextSteps: [
-        { stepId: 'step-3', condition: 'true' },
-        { stepId: 'step-4', condition: 'false' }
+        { stepId: 'step-3', condition: { field: 'amount', operator: 'greater', value: threshold } },
+        { stepId: 'step-4', condition: { field: 'amount', operator: 'less', value: threshold + 1 } }
       ],
-      arcadeTool: null
+      arcadeTool: undefined
     })
     
     steps.push({
@@ -296,8 +318,8 @@ function generateWorkflowSteps(input: string, entities: WorkflowEntity[]): Workf
         approver: 'manager',
         deadline: '2 days'
       },
-      nextSteps: [{ stepId: 'step-5', condition: null }],
-      arcadeTool: null
+      nextSteps: [{ stepId: 'step-5' }],
+      arcadeTool: undefined
     })
     
     steps.push({
@@ -309,13 +331,13 @@ function generateWorkflowSteps(input: string, entities: WorkflowEntity[]): Workf
         approver: 'system',
         deadline: null
       },
-      nextSteps: [{ stepId: 'step-5', condition: null }],
-      arcadeTool: null
+      nextSteps: [{ stepId: 'step-5' }],
+      arcadeTool: undefined
     })
     
     steps.push({
       id: 'step-5',
-      type: 'notification',
+      type: 'update',
       name: 'Send Confirmation',
       description: 'Notify employee of approval status',
       config: {
@@ -324,7 +346,11 @@ function generateWorkflowSteps(input: string, entities: WorkflowEntity[]): Workf
         recipients: ['submitter']
       },
       nextSteps: [],
-      arcadeTool: 'sendgrid-send-email'
+      arcadeTool: {
+        name: 'sendgrid-send-email',
+        inputMapping: { recipients: 'submitter', template: 'expense_notification' },
+        outputMapping: { result: 'notification_sent' }
+      }
     })
   } else {
     // Generate steps from extracted texts for other workflows
@@ -336,8 +362,8 @@ function generateWorkflowSteps(input: string, entities: WorkflowEntity[]): Workf
         name: generateStepName(stepText, stepType),
         description: stepText,
         config: generateStepConfig(stepType, stepText, entities),
-        nextSteps: index < stepTexts.length - 1 ? [{ stepId: `step-${stepCounter}`, condition: null }] : [],
-        arcadeTool: inferArcadeTool(stepText, entities)
+        nextSteps: index < stepTexts.length - 1 ? [{ stepId: `step-${stepCounter}` }] : [],
+        arcadeTool: inferArcadeTool(stepText, entities) || undefined
       }
       steps.push(step)
     })
@@ -352,7 +378,7 @@ function generateWorkflowSteps(input: string, entities: WorkflowEntity[]): Workf
       description: 'Initial step for the workflow',
       config: { fields: [], required: true },
       nextSteps: [],
-      arcadeTool: null
+      arcadeTool: undefined
     })
   }
   
@@ -372,7 +398,7 @@ function generateStepName(text: string, stepType: string): string {
     .join(' ')
   
   // Add appropriate prefix based on step type
-  const prefixes = {
+  const prefixes: Record<string, string> = {
     'capture': 'Capture',
     'review': 'Review',
     'approve': 'Approve',
@@ -401,7 +427,7 @@ function generateStepName(text: string, stepType: string): string {
 /**
  * Infers step type from text
  */
-function inferStepType(text: string): string {
+function inferStepType(text: string): 'capture' | 'review' | 'approve' | 'update' | 'condition' | 'parallel' {
   const lowerText = text.toLowerCase()
   
   for (const [keyword, stepType] of Object.entries(STEP_TYPE_MAPPING)) {
@@ -410,15 +436,18 @@ function inferStepType(text: string): string {
     }
   }
   
-  // Default inference based on text patterns
+  // Default inference based on text patterns - only return valid types
   if (lowerText.includes('email') || lowerText.includes('send') || lowerText.includes('notify')) {
-    return 'notification'
+    return 'update' // Use update for notifications since notification isn't a valid type
   }
-  if (lowerText.includes('approve') || lowerText.includes('review')) {
+  if (lowerText.includes('approve')) {
     return 'approve'
   }
+  if (lowerText.includes('review')) {
+    return 'review'
+  }
   if (lowerText.includes('wait') || lowerText.includes('delay') || lowerText.includes('schedule')) {
-    return 'delay'
+    return 'condition' // Use condition for delays since delay isn't a valid type
   }
   if (lowerText.includes('check') || lowerText.includes('if') || lowerText.includes('condition')) {
     return 'condition'
@@ -429,15 +458,18 @@ function inferStepType(text: string): string {
   if (lowerText.includes('create') || lowerText.includes('input') || lowerText.includes('form')) {
     return 'capture'
   }
+  if (lowerText.includes('parallel') || lowerText.includes('simultaneously')) {
+    return 'parallel'
+  }
   
-  return 'human_task' // Default fallback
+  return 'capture' // Default fallback to valid type
 }
 
 /**
  * Generates step configuration based on type and text
  */
 function generateStepConfig(stepType: string, text: string, entities: WorkflowEntity[]): any {
-  const baseConfigs = {
+  const baseConfigs: Record<string, any> = {
     'capture': { fields: [], required: true },
     'review': { reviewer: null, deadline: null },
     'approve': { approver: null, deadline: null },
@@ -478,14 +510,14 @@ function generateStepConfig(stepType: string, text: string, entities: WorkflowEn
 /**
  * Infers Arcade.dev tool based on text and entities
  */
-function inferArcadeTool(text: string, entities: WorkflowEntity[]): string | null {
+function inferArcadeTool(text: string, entities: WorkflowEntity[]): ArcadeToolConfig | null {
   const integrationEntities = entities.filter(e => e.type === 'integration')
   
   if (integrationEntities.length > 0) {
     const integration = integrationEntities[0].value.toLowerCase()
     
     // Map common integrations to Arcade tools
-    const arcadeMapping = {
+    const arcadeMapping: Record<string, string> = {
       'slack': 'slack-send-message',
       'email': 'sendgrid-send-email',
       'teams': 'microsoft-teams-send-message',
@@ -499,7 +531,12 @@ function inferArcadeTool(text: string, entities: WorkflowEntity[]): string | nul
       'notion': 'notion-create-page'
     }
     
-    return arcadeMapping[integration] || null
+    const toolName = arcadeMapping[integration]
+    return toolName ? {
+      name: toolName,
+      inputMapping: {},
+      outputMapping: {}
+    } : null
   }
   
   return null
@@ -579,23 +616,27 @@ function createSuggestedWorkflow(input: string, intent: string, entities: Workfl
     id: `workflow-${Date.now()}`,
     name: generateWorkflowName(input, intent),
     description: `Automated workflow: ${intent || input.slice(0, 100)}`,
-    steps: suggestedSteps,
-    triggers: extractTriggers(entities),
-    status: 'draft',
     version: 1,
+    status: 'draft',
+    prompt: input,
     config: {
-      auto_start: true,
-      retry_on_failure: true,
-      max_retries: 3
+      triggers: extractTriggers(entities),
+      steps: suggestedSteps,
+      settings: {
+        notificationChannels: [],
+        errorHandling: 'stop',
+        maxRetries: 3,
+        timeoutMinutes: 60
+      }
     },
     permissions: {
-      view: ['builder', 'reviewer', 'approver', 'auditor', 'sysadmin'],
-      edit: ['builder', 'sysadmin'],
-      execute: ['builder', 'approver', 'sysadmin'],
-      approve: ['approver', 'sysadmin']
+      executors: ['builder', 'approver', 'sysadmin'],
+      editors: ['builder', 'sysadmin'],
+      viewers: ['builder', 'reviewer', 'approver', 'auditor', 'sysadmin']
     },
     organization_id: '',
     created_by: '',
+    updated_by: '',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   }

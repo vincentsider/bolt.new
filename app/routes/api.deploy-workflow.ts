@@ -1,10 +1,24 @@
 import { type ActionFunctionArgs } from '@remix-run/cloudflare';
+import type { WorkflowStep } from '~/types/database';
+
+interface DeploymentData {
+  workflowId: string;
+  name: string;
+  description?: string;
+  files: Record<string, string>;
+  steps: WorkflowStep[];
+  metadata?: {
+    createdAt: string;
+    createdBy: string;
+    organizationId: string;
+  };
+}
 
 export async function action({ context, request }: ActionFunctionArgs) {
   try {
     console.log('Deploy workflow API called');
     
-    const deploymentData = await request.json();
+    const deploymentData = await request.json() as DeploymentData;
     console.log('Deployment data received:', {
       workflowId: deploymentData.workflowId,
       name: deploymentData.name,
@@ -22,10 +36,12 @@ export async function action({ context, request }: ActionFunctionArgs) {
   } catch (error) {
     console.error('Deployment error:', error);
     
+    const errorMessage = error instanceof Error ? error.message : 'Deployment failed';
+    
     return Response.json(
       { 
         success: false, 
-        error: error.message || 'Deployment failed',
+        error: errorMessage,
         message: 'Failed to deploy workflow'
       }, 
       { status: 500 }
@@ -33,7 +49,7 @@ export async function action({ context, request }: ActionFunctionArgs) {
   }
 }
 
-async function createCloudflareDeployment(workflowId: string, deploymentData: any) {
+async function createCloudflareDeployment(workflowId: string, deploymentData: DeploymentData) {
   try {
     // Store deployment data in a way that can be retrieved later
     // For now, we'll create a working URL within the current application
@@ -81,9 +97,12 @@ async function createCloudflareDeployment(workflowId: string, deploymentData: an
     
   } catch (error) {
     console.error('Cloudflare deployment failed:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    
     return { 
       success: false, 
-      error: error.message,
+      error: errorMessage,
       message: 'Deployment failed. Please try again.'
     };
   }
@@ -152,11 +171,11 @@ function createStaticWorkflowHtml(indexHtml: string, submitHtml: string, css: st
     </div>
     
     <div id="home-tab" class="tab-content active">
-      ${indexHtml.replace(/<html[^>]*>|<\/html>|<head>.*?<\/head>|<body[^>]*>|<\/body>/gs, '')}
+      ${indexHtml.replace(/<html[^>]*>|<\/html>|<head>[\s\S]*?<\/head>|<body[^>]*>|<\/body>/g, '')}
     </div>
     
     <div id="submit-tab" class="tab-content">
-      ${submitHtml ? submitHtml.replace(/<html[^>]*>|<\/html>|<head>.*?<\/head>|<body[^>]*>|<\/body>/gs, '') : '<p>Submit form not available</p>'}
+      ${submitHtml ? submitHtml.replace(/<html[^>]*>|<\/html>|<head>[\s\S]*?<\/head>|<body[^>]*>|<\/body>/g, '') : '<p>Submit form not available</p>'}
     </div>
     
     <div id="dashboard-tab" class="tab-content">

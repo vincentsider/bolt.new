@@ -7,9 +7,10 @@ import type { Workflow } from '~/types/database'
 interface WorkflowListProps {
   onWorkflowSelect?: (workflow: Workflow) => void
   onCreateNew?: () => void
+  onCreateWithAgent?: () => void
 }
 
-export function WorkflowList({ onWorkflowSelect, onCreateNew }: WorkflowListProps) {
+export function WorkflowList({ onWorkflowSelect, onCreateNew, onCreateWithAgent }: WorkflowListProps) {
   const { user, profile } = useAuth()
   const fieldSecurity = useFieldSecurity(profile?.role || 'reviewer', profile?.organization_id || '')
   const [workflows, setWorkflows] = useState<Workflow[]>([])
@@ -87,12 +88,21 @@ export function WorkflowList({ onWorkflowSelect, onCreateNew }: WorkflowListProp
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Workflows</h1>
-        <button
-          onClick={onCreateNew}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-        >
-          Create Workflow
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={onCreateNew}
+            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+          >
+            Visual Builder
+          </button>
+          <button
+            onClick={onCreateWithAgent}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2"
+          >
+            <span>🤖</span>
+            AI Builder
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -105,12 +115,21 @@ export function WorkflowList({ onWorkflowSelect, onCreateNew }: WorkflowListProp
         <div className="text-center py-12">
           <h3 className="text-lg font-medium text-gray-900 mb-2">No workflows yet</h3>
           <p className="text-gray-500 mb-4">Create your first workflow to get started.</p>
-          <button
-            onClick={onCreateNew}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-          >
-            Create Your First Workflow
-          </button>
+          <div className="flex justify-center gap-3">
+            <button
+              onClick={onCreateNew}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            >
+              Visual Builder
+            </button>
+            <button
+              onClick={onCreateWithAgent}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2"
+            >
+              <span>🤖</span>
+              AI Builder
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid gap-4">

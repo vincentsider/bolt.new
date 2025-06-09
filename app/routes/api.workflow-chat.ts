@@ -1,68 +1,84 @@
 import { type ActionFunctionArgs } from '@remix-run/cloudflare';
-import { MAX_RESPONSE_SEGMENTS, MAX_WORKFLOW_TOKENS } from '~/lib/.server/llm/constants';
-import { CONTINUE_PROMPT } from '~/lib/.server/llm/workflow-prompts';
-import { streamText, streamWorkflowText, type Messages, type StreamingOptions } from '~/lib/.server/llm/stream-text';
-import SwitchableStream from '~/lib/.server/llm/switchable-stream';
 
-function detectModificationRequest(messages: Messages): boolean {
-  // If this is the first conversation (only welcome message), it's a new workflow
-  if (messages.length <= 2) {
-    return false;
+export async function action({ context, request }: ActionFunctionArgs) {
+  // Local type definitions
+  interface Message {
+    role: 'user' | 'assistant';
+    content: string;
+    toolInvocations?: any[];
+  }
+  type Messages = Message[];
+  interface StreamingOptions {
+    toolChoice?: 'none' | 'auto';
+    onFinish?: (result: { text: string; finishReason: string }) => Promise<void> | void;
   }
 
-  // Look for file modifications tag in the latest user message
-  const lastUserMessage = messages.filter(m => m.role === 'user').pop();
-  if (!lastUserMessage) {
-    return false;
-  }
-
-  // If the message contains file modifications, it's definitely a modification request
-  if (lastUserMessage.content.includes('<workflowhub_file_modifications>')) {
-    console.log('File modifications detected in message - treating as modification request');
-    return true;
-  }
-
-  const content = lastUserMessage.content.toLowerCase();
-  const modificationKeywords = [
-    'fix', 'debug', 'error', 'bug', 'not working', 'broken', 'issue', 'problem',
-    'update', 'modify', 'change', 'edit', 'improve', 'enhance', 'adjust',
-    'add to', 'remove from', 'replace', 'correct', 'repair', 'submit'
-  ];
-
-  const hasModificationKeywords = modificationKeywords.some(keyword => content.includes(keyword));
-
-  // Check if previous messages contain artifact generation (indicating existing workflow)
-  const hasExistingWorkflow = messages.some(m => 
-    m.role === 'assistant' && 
-    (m.content.includes('boltArtifact') || m.content.includes('Workflow Generated Successfully'))
-  );
-
-  console.log('Modification detection:', {
-    hasModificationKeywords,
-    hasExistingWorkflow,
-    lastUserMessage: content.substring(0, 100)
-  });
-
-  return hasModificationKeywords && hasExistingWorkflow;
-}
-
-export async function action(args: ActionFunctionArgs) {
-  return workflowChatAction(args);
-}
-
-async function workflowChatAction({ context, request }: ActionFunctionArgs) {
   console.log('Workflow chat API called')
   
   const { messages } = await request.json<{ messages: Messages }>();
   console.log('Received messages:', messages.length)
 
   // Analyze the conversation to determine if this is a modification request
-  const isModificationRequest = detectModificationRequest(messages);
+  const isModificationRequest = (() => {
+    // If this is the first conversation (only welcome message), it's a new workflow
+    if (messages.length <= 2) {
+      return false;
+    }
+
+    // Look for file modifications tag in the latest user message
+    const lastUserMessage = messages.filter(m => m.role === 'user').pop();
+    if (!lastUserMessage) {
+      return false;
+    }
+
+    // If the message contains file modifications, it's definitely a modification request
+    if (lastUserMessage.content.includes('<workflowhub_file_modifications>')) {
+      console.log('File modifications detected in message - treating as modification request');
+      return true;
+    }
+
+    const content = lastUserMessage.content.toLowerCase();
+    const modificationKeywords = [
+      'fix', 'debug', 'error', 'bug', 'not working', 'broken', 'issue', 'problem',
+      'update', 'modify', 'change', 'edit', 'improve', 'enhance', 'adjust',
+      'add to', 'remove from', 'replace', 'correct', 'repair', 'submit'
+    ];
+
+    const hasModificationKeywords = modificationKeywords.some(keyword => content.includes(keyword));
+
+    // Check if previous messages contain artifact generation (indicating existing workflow)
+    const hasExistingWorkflow = messages.some(m => 
+      m.role === 'assistant' && 
+      (m.content.includes('boltArtifact') || m.content.includes('Workflow Generated Successfully'))
+    );
+
+    console.log('Modification detection:', {
+      hasModificationKeywords,
+      hasExistingWorkflow,
+      lastUserMessage: content.substring(0, 100)
+    });
+
+    return hasModificationKeywords && hasExistingWorkflow;
+  })();
   console.log('Is modification request:', isModificationRequest)
 
-  const stream = new SwitchableStream();
-
   try {
+    // Dynamic imports to avoid server module issues during build
+    const [
+      { MAX_RESPONSE_SEGMENTS, MAX_WORKFLOW_TOKENS },
+      { CONTINUE_PROMPT },
+      { streamWorkflowText },
+      SwitchableStreamModule
+    ] = await Promise.all([
+      import('~/lib/.server/llm/constants'),
+      import('~/lib/.server/llm/workflow-prompts'),
+      import('~/lib/.server/llm/stream-text'),
+      import('~/lib/.server/llm/switchable-stream')
+    ]);
+
+    const SwitchableStream = SwitchableStreamModule.default;
+    const stream = new SwitchableStream();
+
     const options: StreamingOptions = {
       toolChoice: 'none',
       onFinish: async ({ text: content, finishReason }) => {
@@ -107,7 +123,9 @@ async function workflowChatAction({ context, request }: ActionFunctionArgs) {
   } catch (error) {
     console.error('Workflow chat API error:', error);
 
-    throw new Response(JSON.stringify({ error: error.message }), {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    throw new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       statusText: 'Internal Server Error',
       headers: {

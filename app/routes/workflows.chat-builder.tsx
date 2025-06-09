@@ -21,13 +21,20 @@ function WorkflowLivePreview({ generatedCode, workflowFiles, workflow }: Workflo
   const [htmlContent, setHtmlContent] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
 
+  // FIXED: Force live preview updates when content changes
   useEffect(() => {
+    console.log('🔄 LIVE PREVIEW UPDATE: Files changed', Object.keys(workflowFiles).length, 'Code length:', generatedCode.length)
+    
     if (Object.keys(workflowFiles).length > 0) {
+      console.log('📁 Using persistent workflow files for preview')
       generateLivePreview(workflowFiles)
-    } else if (generatedCode) {
+    } else if (generatedCode && generatedCode.length > 100) {
+      console.log('📝 Using generated code for preview')
       generateLivePreview(generatedCode)
+    } else {
+      console.log('⚠️ No substantial content for preview yet')
     }
-  }, [generatedCode, workflowFiles])
+  }, [generatedCode, workflowFiles, Object.keys(workflowFiles).length])
 
   const generateLivePreview = (input: string | {[key: string]: string}) => {
     try {

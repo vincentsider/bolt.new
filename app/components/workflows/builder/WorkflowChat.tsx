@@ -123,6 +123,17 @@ What would you like me to do with this workflow?`,
   const [workflowFiles, setWorkflowFiles] = useState<{[key: string]: string}>({})
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [progressInfo, setProgressInfo] = useState<{
+    step: string
+    percentage: number
+    startTime: number | null
+    estimatedCompletion: number | null
+  }>({
+    step: '',
+    percentage: 0,
+    startTime: null,
+    estimatedCompletion: null
+  })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -145,20 +156,46 @@ What would you like me to do with this workflow?`,
     }
   }, [isLoading])
 
-  // Handle initial input from URL parameters
+  // Update timer display every second during loading
+  useEffect(() => {
+    if (isLoading && progressInfo.startTime) {
+      const timerInterval = setInterval(() => {
+        setProgressInfo(prev => ({ ...prev })) // Force re-render to update elapsed time display
+      }, 1000)
+      
+      return () => clearInterval(timerInterval)
+    }
+  }, [isLoading, progressInfo.startTime])
+
+  // Handle initial input from URL parameters - auto-start like Bolt.new
   useEffect(() => {
     if (initialInput && messages.length === 1) {
-      // Automatically send the initial input as the first user message
-      setInput(initialInput)
-      // Use a small delay to ensure the component is fully rendered
-      setTimeout(() => {
-        const form = document.querySelector('form')
-        if (form) {
-          form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
-        }
-      }, 500)
+      const urlParams = new URLSearchParams(window.location.search);
+      const autostart = urlParams.get('autostart') === 'true';
+      
+      console.log('🚀 AUTO-START: Initial input detected:', initialInput, 'Autostart:', autostart);
+      
+      // ALWAYS populate the input first
+      setInput(initialInput);
+      
+      if (autostart) {
+        // FIXED: Use requestAnimationFrame to ensure DOM is ready, then auto-submit
+        requestAnimationFrame(() => {
+          console.log('🔥 AUTO-SUBMITTING: Processing workflow request immediately...');
+          
+          // Create synthetic form submission event
+          const syntheticEvent = {
+            preventDefault: () => {},
+            currentTarget: { checkValidity: () => true },
+            target: { reset: () => {} }
+          } as React.FormEvent;
+          
+          // Call handleSubmit directly with the initial input
+          handleSubmit(syntheticEvent);
+        });
+      }
     }
-  }, [initialInput, messages.length])
+  }, [initialInput])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -175,6 +212,14 @@ What would you like me to do with this workflow?`,
     setInput('')
     setIsLoading(true)
     setIsGeneratingWorkflow(true)
+    
+    // Initialize progress tracking
+    setProgressInfo({
+      step: 'Starting generation',
+      percentage: 0,
+      startTime: Date.now(),
+      estimatedCompletion: null
+    })
 
     try {
       console.log('Sending workflow chat request...')
@@ -248,11 +293,12 @@ What would you like me to do with this workflow?`,
         assistantContent += text
         chunkCount++
         
-        // Clean and send real-time updates to code view
+        // Clean and send real-time updates to code view - FORCE REFRESH
         const currentCleanContent = cleanStreamingResponse(assistantContent)
         if (currentCleanContent.length > accumulatedCleanContent.length) {
           accumulatedCleanContent = currentCleanContent
-          // Send real-time update to code view
+          // Send real-time update to code view AND force live preview refresh
+          console.log('🔄 STREAMING UPDATE: Sending code update to preview', currentCleanContent.length, 'chars')
           onCodeUpdate(currentCleanContent)
         }
         
@@ -280,18 +326,20 @@ What would you like me to do with this workflow?`,
       console.log('Cleaned content length:', cleanedContent.length)
       console.log('Cleaned content preview:', cleanedContent.substring(0, 500) + '...')
       
-      // Extract and persist files from the response
+      // Extract and persist files from the response - FORCE PREVIEW UPDATE
       const extractedFiles = extractFilesFromResponse(cleanedContent)
       if (Object.keys(extractedFiles).length > 0) {
-        console.log('Extracted files:', Object.keys(extractedFiles))
+        console.log('📁 EXTRACTED FILES:', Object.keys(extractedFiles))
         setWorkflowFiles(prev => {
           const updatedFiles = { ...prev, ...extractedFiles }
+          console.log('🚀 UPDATING FILES: Triggering live preview refresh')
           onFilesUpdate(updatedFiles)
           return updatedFiles
         })
       }
       
-      // Send the cleaned generated code to the parent
+      // Send the cleaned generated code to the parent - FORCE FINAL UPDATE
+      console.log('📝 FINAL CODE UPDATE: Sending to preview', cleanedContent.length, 'chars')
       onCodeUpdate(cleanedContent)
       
       // Debug: Log the response to see what we're getting
@@ -304,13 +352,20 @@ What would you like me to do with this workflow?`,
       // Parse the response for workflow updates using cleaned content
       const workflowUpdated = parseWorkflowUpdates(cleanedContent)
 
-      // Create a user-friendly summary message instead of showing raw code
-      const summaryMessage = createWorkflowSummary(assistantContent, workflowUpdated)
+      // Show completion progress
+      setProgressInfo(prev => ({
+        ...prev,
+        step: 'Workflow complete!',
+        percentage: 100
+      }))
       
-      // Update the streaming message with the final summary
+      // Extract the conversational AI response from the cleaned content
+      const finalMessage = extractConversationalResponse(cleanedContent)
+      
+      // Update the streaming message with the AI's conversational response
       setMessages(prev => prev.map(msg => 
         msg.id === streamingMessageId 
-          ? { ...msg, content: summaryMessage }
+          ? { ...msg, content: finalMessage }
           : msg
       ))
 
@@ -326,93 +381,159 @@ What would you like me to do with this workflow?`,
     } finally {
       setIsLoading(false)
       setIsGeneratingWorkflow(false)
+      
+      // Reset progress info
+      setProgressInfo({
+        step: '',
+        percentage: 0,
+        startTime: null,
+        estimatedCompletion: null
+      })
     }
   }
 
-  const createWorkflowSummary = (content: string, workflowUpdated: boolean): string => {
-    if (workflowUpdated) {
+  const extractConversationalResponse = (content: string): string => {
+    try {
+      // Look for the AI's conversational response outside of artifact tags
+      // The AI's response is usually after the </boltArtifact> tag
+      const afterArtifact = content.split('</boltArtifact>')[1];
+      
+      if (afterArtifact && afterArtifact.trim().length > 0) {
+        // Clean up the response - remove any extra whitespace and formatting
+        const conversationalResponse = afterArtifact
+          .trim()
+          .replace(/^\n+/, '') // Remove leading newlines
+          .replace(/\n+$/, '') // Remove trailing newlines
+          .replace(/\n\s*\n/g, '\n\n'); // Normalize paragraph spacing
+        
+        if (conversationalResponse.length > 50) {
+          console.log('Found conversational response:', conversationalResponse.substring(0, 200) + '...');
+          return conversationalResponse;
+        }
+      }
+      
+      // Fallback to smart summary if no conversational response found
+      return createSmartWorkflowSummary(content);
+      
+    } catch (error) {
+      console.error('Error extracting conversational response:', error);
+      return createSmartWorkflowSummary(content);
+    }
+  };
+
+  const createSmartWorkflowSummary = (content: string): string => {
+    // Check if this appears to be a workflow generation response
+    const hasWorkflowArtifact = content.includes('<boltArtifact') && content.includes('</boltArtifact>');
+    
+    if (hasWorkflowArtifact) {
       // Extract workflow name from content
       const packageMatch = content.match(/"name":\s*"([^"]+)"/);
       const workflowName = packageMatch ? packageMatch[1] : 'Your Workflow';
       
-      // Count actual workflow steps from current state
-      const currentSteps = workflow.config?.steps || [];
-      const stepCount = currentSteps.length;
-      
       // Count features generated
       const features = [];
-      if (content.includes('package.json')) features.push('✅ Project configuration');
-      if (content.includes('server.js')) features.push('✅ Backend server');
-      if (content.includes('form') || content.includes('html')) features.push('✅ User interfaces');
-      if (content.includes('email') || content.includes('nodemailer')) features.push('✅ Email notifications');
-      if (content.includes('database') || content.includes('sqlite')) features.push('✅ Database schema');
+      if (content.includes('package.json')) features.push('✅ Project configuration and dependencies');
+      if (content.includes('server.js')) features.push('✅ Backend server with Express.js');
+      if (content.includes('form') || content.includes('html')) features.push('✅ Professional user interfaces');
+      if (content.includes('email') || content.includes('nodemailer')) features.push('✅ Email notification system');
+      if (content.includes('database') || content.includes('sqlite')) features.push('✅ Database schema and operations');
       if (content.includes('upload') || content.includes('multer')) features.push('✅ File upload handling');
+      if (content.includes('css') || content.includes('style')) features.push('✅ Professional styling');
       
-      // Generate step summary
-      const stepSummary = currentSteps.length > 0 ? 
-        currentSteps.map(step => `• **${step.name}**: ${step.description}`).join('\n') :
-        '• Basic workflow structure created';
-      
-      return `🎉 **Workflow Generated Successfully!**
+      return `🎉 **I've successfully created your workflow application!**
 
 **"${workflowName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}"**
 
-I've created a complete, executable workflow application with **${stepCount} workflow steps**:
+Here's what I've built for you:
 
-${stepSummary}
+${features.length > 0 ? features.join('\n') : '✅ Complete workflow application structure'}
 
-**Generated Components:**
-${features.join('\n')}
+**The application includes:**
+• Complete working forms for data collection
+• Automated business logic and routing
+• Professional user interface with responsive design
+• Email notifications for all stakeholders
+• Database operations for data persistence
+• Real-time dashboard for monitoring
 
-The workflow is now visible in the canvas on the right. You can:
-• **Save** the workflow as a draft
-• **Deploy** it to make it live
-• **Modify** it by asking me to make changes
-• **Test** it once deployed
+**You can now:**
+• **💾 Save** the workflow as a draft for later
+• **🚀 Deploy** it to make it live and functional
+• **✏️ Ask me to modify** any aspect of the workflow
+• **🧪 Test** it once deployed to see it in action
 
-What would you like to do next?`;
+The workflow is visible in the live preview on the right. What would you like me to adjust or add to make it perfect for your needs?`;
     } else {
-      return `I'm working on processing your request. The workflow structure will be updated momentarily. Please let me know if you'd like me to make any specific changes or additions.`;
+      return `I'm processing your request and generating the workflow application. The complete implementation will be ready shortly with all the functionality you requested.`;
     }
   };
 
   const extractProgressMessage = (cleanedContent: string, chunkCount: number): string => {
-    // Extract what's being built from the AI response like Bolt.new
+    let step = ''
+    let percentage = 0
+    let message = ''
+
+    // ENHANCED: Conversational progress messages with percentage tracking
     if (cleanedContent.length < 100) {
-      return '🤖 Starting workflow generation...'
+      step = 'Analyzing requirements'
+      percentage = 5
+      message = '🤖 Analyzing your workflow requirements and getting started...'
+    } else if (cleanedContent.includes('package.json')) {
+      step = 'Setting up project foundation'
+      percentage = 15
+      message = `📦 Setting up the project foundation with all the dependencies your workflow needs...`
+    } else if (cleanedContent.includes('server.js')) {
+      step = 'Building backend server'
+      percentage = 35
+      message = `⚙️ Building the backend server that will handle your workflow logic and data processing...`
+    } else if (cleanedContent.includes('views/') || cleanedContent.includes('.html')) {
+      step = 'Creating user interfaces'
+      percentage = 55
+      message = `🎨 Creating beautiful, professional forms and user interfaces for your workflow...`
+    } else if (cleanedContent.includes('nodemailer') || cleanedContent.includes('email')) {
+      step = 'Setting up notifications'
+      percentage = 70
+      message = `📧 Setting up email notifications so everyone stays informed about workflow progress...`
+    } else if (cleanedContent.includes('database') || cleanedContent.includes('sqlite')) {
+      step = 'Building database structure'
+      percentage = 60
+      message = `🗄️ Building the database structure to securely store and manage your workflow data...`
+    } else if (cleanedContent.includes('css') || cleanedContent.includes('style')) {
+      step = 'Adding professional styling'
+      percentage = 80
+      message = `💅 Adding professional styling to make your workflow look polished and user-friendly...`
+    } else if (cleanedContent.includes('boltArtifact')) {
+      step = 'Finalizing workflow'
+      percentage = 95
+      message = `✨ Putting the finishing touches on your workflow application - almost ready!`
+    } else {
+      step = 'Generating workflow application'
+      percentage = Math.min(10 + Math.floor(cleanedContent.length / 1000) * 5, 90)
+      message = `🔄 Generating your complete workflow application with all the features you requested...`
     }
 
-    // Look for key indicators of what's being built
-    if (cleanedContent.includes('package.json')) {
-      return `📦 Setting up project structure... (${chunkCount} chunks processed)`
-    }
+    // Update progress state
+    setProgressInfo(prev => {
+      const now = Date.now()
+      const startTime = prev.startTime || now
+      const elapsed = now - startTime
+      
+      // Estimate completion based on current progress and elapsed time
+      let estimatedCompletion = null
+      if (percentage > 10 && elapsed > 2000) { // Only estimate after 2 seconds and 10% progress
+        const estimatedTotal = (elapsed / percentage) * 100
+        estimatedCompletion = startTime + estimatedTotal
+      }
+
+      return {
+        step,
+        percentage,
+        startTime,
+        estimatedCompletion
+      }
+    })
     
-    if (cleanedContent.includes('server.js')) {
-      return `⚙️ Building backend server logic... (${chunkCount} chunks processed)`
-    }
-    
-    if (cleanedContent.includes('views/') || cleanedContent.includes('.html')) {
-      return `🎨 Creating user interface forms... (${chunkCount} chunks processed)`
-    }
-    
-    if (cleanedContent.includes('nodemailer') || cleanedContent.includes('email')) {
-      return `📧 Configuring email notifications... (${chunkCount} chunks processed)`
-    }
-    
-    if (cleanedContent.includes('database') || cleanedContent.includes('sqlite')) {
-      return `🗄️ Setting up database schema... (${chunkCount} chunks processed)`
-    }
-    
-    if (cleanedContent.includes('css') || cleanedContent.includes('style')) {
-      return `💅 Styling the application... (${chunkCount} chunks processed)`
-    }
-    
-    if (cleanedContent.includes('boltArtifact')) {
-      return `✨ Finalizing workflow application... (${chunkCount} chunks processed)`
-    }
-    
-    // Default progress message
-    return `🔄 Generating workflow code... (${chunkCount} chunks processed)`
+    return message
   }
 
   const extractFilesFromResponse = (content: string): {[key: string]: string} => {
@@ -812,7 +933,49 @@ What would you like to do next?`;
           })}
           
           {isLoading && (
-            <div className="text-center w-full text-bolt-elements-textSecondary i-svg-spinners:3-dots-fade text-4xl mt-4"></div>
+            <div className="flex gap-4 p-6 w-full rounded-[calc(0.75rem-1px)] bg-gradient-to-b from-bolt-elements-messages-background from-30% to-transparent mt-4">
+              <div className="flex items-center justify-center w-[34px] h-[34px] overflow-hidden bg-bolt-elements-prompt-background text-bolt-elements-textPrimary rounded-full shrink-0 self-start">
+                <div className="i-ph:robot text-xl"></div>
+              </div>
+              <div className="grid grid-col-1 w-full">
+                <div className="overflow-hidden w-full">
+                  <div className="space-y-4">
+                    {/* Progress Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="i-svg-spinners:3-dots-fade text-xl text-bolt-elements-textSecondary"></div>
+                        <span className="text-bolt-elements-textPrimary font-medium">
+                          {progressInfo.step || 'Processing...'}
+                        </span>
+                      </div>
+                      {progressInfo.startTime && (
+                        <div className="text-sm text-bolt-elements-textSecondary">
+                          {Math.floor((Date.now() - progressInfo.startTime) / 1000)}s elapsed
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    <div className="w-full bg-bolt-elements-surface-secondary rounded-full h-2">
+                      <div 
+                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300 ease-out"
+                        style={{ width: `${progressInfo.percentage}%` }}
+                      />
+                    </div>
+                    
+                    {/* Progress Details */}
+                    <div className="flex items-center justify-between text-sm text-bolt-elements-textSecondary">
+                      <span>{progressInfo.percentage}% complete</span>
+                      {progressInfo.estimatedCompletion && (
+                        <span>
+                          ~{Math.max(0, Math.ceil((progressInfo.estimatedCompletion - Date.now()) / 1000))}s remaining
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
           
           <div ref={messagesEndRef} />

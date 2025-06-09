@@ -19,18 +19,34 @@ import { WorkflowStepNode } from './nodes/WorkflowStepNode'
 import { StartNode } from './nodes/StartNode'
 import { EndNode } from './nodes/EndNode'
 import type { WorkflowStep } from '~/types/database'
+import type { ValidationResult } from '~/lib/agents'
+import { ValidationStatusIndicator } from '../RealTimeValidator'
 
 interface WorkflowCanvasProps {
+  workflow?: {
+    steps: WorkflowStep[]
+    name?: string
+    description?: string
+  }
   initialSteps?: WorkflowStep[]
+  selectedStep?: string | null
+  onSelectStep?: (stepId: string | null) => void
+  onUpdateWorkflow?: (updates: any) => void
   onStepsChange?: (steps: WorkflowStep[]) => void
   onNodeSelect?: (node: Node | null) => void
+  validationResults?: ValidationResult[]
   readonly?: boolean
 }
 
 export function WorkflowCanvas({ 
+  workflow,
   initialSteps = [], 
+  selectedStep,
+  onSelectStep,
+  onUpdateWorkflow,
   onStepsChange, 
   onNodeSelect,
+  validationResults = [],
   readonly = false 
 }: WorkflowCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState([])

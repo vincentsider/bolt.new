@@ -157,16 +157,16 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
       return;
     }
 
-    // Check if the input is a workflow request BEFORE animation
+    // Check if the input is a workflow request
     const workflowDetection = detectWorkflowIntent(_input);
     
     if (workflowDetection.isWorkflowRequest && workflowDetection.suggestedWorkflow && user && organization) {
-      // Redirect to chat workflow builder instead of creating workflow here
+      // Switch to workflow chat mode and process immediately (Bolt.new style)
       const workflowName = workflowDetection.suggestedWorkflow.name;
       const encodedInput = encodeURIComponent(_input);
       
-      // Navigate to chat builder with the user's input as a parameter
-      window.location.href = `/workflows/chat-builder?input=${encodedInput}&name=${encodeURIComponent(workflowName)}`;
+      // Navigate to chat builder with immediate processing
+      window.location.href = `/workflows/chat-builder?input=${encodedInput}&name=${encodeURIComponent(workflowName)}&autostart=true`;
       return;
     }
 
