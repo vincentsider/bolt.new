@@ -10,11 +10,9 @@ export default defineConfig({
     hmr: {
       port: 443,
     },
-    // This is the key fix - allow all hosts in production
-    allowedHosts: [
-      '.railway.app',
-      'localhost',
-    ],
+  },
+  ssr: {
+    noExternal: true,
   },
   build: {
     target: 'esnext',

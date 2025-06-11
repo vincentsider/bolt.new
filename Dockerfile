@@ -22,8 +22,11 @@ ENV NODE_ENV=development
 # Railway sets PORT dynamically
 EXPOSE 5173
 
-# Copy start script
-COPY start.sh .
+# Copy scripts
+COPY start.sh fix-imports.sh ./
+
+# Fix imports before starting
+RUN ./fix-imports.sh
 
 # Start the application
 CMD ["./start.sh"]
