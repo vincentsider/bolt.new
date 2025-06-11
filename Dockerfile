@@ -26,7 +26,7 @@ EXPOSE 3000
 ENV NODE_ENV=production
 
 # Copy server file
-COPY server.cjs .
+COPY server-simple.cjs .
 
 # Start the application
 CMD ["pnpm", "start:production"]
