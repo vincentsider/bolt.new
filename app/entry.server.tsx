@@ -6,6 +6,14 @@ import { renderHeadToString } from 'remix-island';
 import { Head } from './root';
 import { themeStore } from '~/lib/stores/theme';
 
+let encoder: TextEncoder;
+function getEncoder() {
+  if (!encoder) {
+    encoder = new TextEncoder();
+  }
+  return encoder;
+}
+
 export default async function handleRequest(
   request: Request,
   responseStatusCode: number,
@@ -27,7 +35,7 @@ export default async function handleRequest(
 
       controller.enqueue(
         new Uint8Array(
-          new TextEncoder().encode(
+          getEncoder().encode(
             `<!DOCTYPE html><html lang="en" data-theme="${themeStore.value}"><head>${head}</head><body><div id="root" class="w-full h-full">`,
           ),
         ),
@@ -40,7 +48,7 @@ export default async function handleRequest(
           .read()
           .then(({ done, value }) => {
             if (done) {
-              controller.enqueue(new Uint8Array(new TextEncoder().encode(`</div></body></html>`)));
+              controller.enqueue(new Uint8Array(getEncoder().encode(`</div></body></html>`)));
               controller.close();
 
               return;

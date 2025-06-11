@@ -1,19 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.SUPABASE_URL || 'https://eyjhpaaumnvwwlwrotgg.supabase.co'
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5amhwYWF1bW52d3dsd3JvdGdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyNzY3NzYsImV4cCI6MjA2NDg1Mjc3Nn0.dwCixK3vhobT9SkzV-lVjHSla_6yZFcdQPkuXswBais'
+// Hardcode values to avoid any environment variable access
+const supabaseUrl = 'https://eyjhpaaumnvwwlwrotgg.supabase.co'
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5amhwYWF1bW52d3dsd3JvdGdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyNzY3NzYsImV4cCI6MjA2NDg1Mjc3Nn0.dwCixK3vhobT9SkzV-lVjHSla_6yZFcdQPkuXswBais'
 
-// Create a lazy-initialized supabase client to avoid global scope issues in Cloudflare Workers
-let _supabase: ReturnType<typeof createClient> | null = null
-
-export const supabase = new Proxy({} as ReturnType<typeof createClient>, {
-  get(target, prop, receiver) {
-    if (!_supabase) {
-      _supabase = createClient(supabaseUrl, supabaseAnonKey)
-    }
-    return Reflect.get(_supabase, prop, receiver)
-  }
-})
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Test connection
 export async function testConnection() {

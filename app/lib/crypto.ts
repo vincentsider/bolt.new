@@ -1,6 +1,22 @@
-const encoder = new TextEncoder();
-const decoder = new TextDecoder();
 const IV_LENGTH = 16;
+
+// Lazy-initialize encoder/decoder to avoid global scope issues in Cloudflare Workers
+let encoder: TextEncoder;
+let decoder: TextDecoder;
+
+function getEncoder() {
+  if (!encoder) {
+    encoder = new TextEncoder();
+  }
+  return encoder;
+}
+
+function getDecoder() {
+  if (!decoder) {
+    decoder = new TextDecoder();
+  }
+  return decoder;
+}
 
 export async function encrypt(key: string, data: string) {
   const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
@@ -12,7 +28,7 @@ export async function encrypt(key: string, data: string) {
       iv,
     },
     cryptoKey,
-    encoder.encode(data),
+    getEncoder().encode(data),
   );
 
   const bundle = new Uint8Array(IV_LENGTH + ciphertext.byteLength);
@@ -40,7 +56,7 @@ export async function decrypt(key: string, payload: string) {
     ciphertext,
   );
 
-  return decoder.decode(plaintext);
+  return getDecoder().decode(plaintext);
 }
 
 async function getKey(key: string) {

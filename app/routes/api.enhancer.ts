@@ -3,8 +3,22 @@ import { StreamingTextResponse, parseStreamPart } from 'ai';
 import { streamText } from '~/lib/.server/llm/stream-text';
 import { stripIndents } from '~/utils/stripIndent';
 
-const encoder = new TextEncoder();
-const decoder = new TextDecoder();
+let encoder: TextEncoder;
+let decoder: TextDecoder;
+
+function getEncoder() {
+  if (!encoder) {
+    encoder = new TextEncoder();
+  }
+  return encoder;
+}
+
+function getDecoder() {
+  if (!decoder) {
+    decoder = new TextDecoder();
+  }
+  return decoder;
+}
 
 export async function action(args: ActionFunctionArgs) {
   return enhancerAction(args);
@@ -34,7 +48,7 @@ async function enhancerAction({ context, request }: ActionFunctionArgs) {
 
     const transformStream = new TransformStream({
       transform(chunk, controller) {
-        const processedChunk = decoder
+        const processedChunk = getDecoder()
           .decode(chunk)
           .split('\n')
           .filter((line) => line !== '')
@@ -42,7 +56,7 @@ async function enhancerAction({ context, request }: ActionFunctionArgs) {
           .map((part) => part.value)
           .join('');
 
-        controller.enqueue(encoder.encode(processedChunk));
+        controller.enqueue(getEncoder().encode(processedChunk));
       },
     });
 

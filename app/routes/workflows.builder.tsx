@@ -1,20 +1,51 @@
-import React, { useState, useEffect } from 'react'
+import * as React from 'react'
 import { useSearchParams } from '@remix-run/react'
 import { useAuth } from '~/components/auth/AuthProvider'
 import { supabase } from '~/lib/supabase'
 import type { Workflow, WorkflowStep } from '~/types/database'
-import { WorkflowCanvas } from '~/components/workflows/builder/WorkflowCanvas'
 import { ComponentPalette } from '~/components/workflows/builder/ComponentPalette'
-// import { StepConfigPanel } from '~/components/workflows/builder/config/StepConfigPanel'
-import type { Node } from 'reactflow'
 
-export default function WorkflowBuilderPage() {
+interface WorkflowPreviewProps {
+  workflow: Partial<Workflow>
+}
+
+function WorkflowPreview({ workflow }: WorkflowPreviewProps) {
+  return (
+    <div className="p-6">
+      <h3 className="text-lg font-medium mb-4">Workflow Preview</h3>
+      <div className="space-y-4">
+        <div>
+          <h4 className="font-medium">Name</h4>
+          <p className="text-gray-600">{workflow.name || 'Untitled'}</p>
+        </div>
+        <div>
+          <h4 className="font-medium">Description</h4>
+          <p className="text-gray-600">{workflow.description || 'No description'}</p>
+        </div>
+        <div>
+          <h4 className="font-medium">Steps</h4>
+          <div className="space-y-2 mt-2">
+            {(workflow.config?.steps || []).map((step, index) => (
+              <div key={step.id} className="p-3 bg-gray-50 rounded">
+                <p className="font-medium">Step {index + 1}: {step.name}</p>
+                <p className="text-sm text-gray-600">Type: {step.type}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function WorkflowBuilder() {
   const { user, organization, loading: authLoading } = useAuth()
   const [searchParams] = useSearchParams()
   const workflowId = searchParams.get('id')
-  
-  const [workflow, setWorkflow] = useState<Partial<Workflow>>({
-    name: 'New Workflow',
+  const [loading, setLoading] = React.useState(true)
+  const [showPreview, setShowPreview] = React.useState(false)
+  const [workflow, setWorkflow] = React.useState<Partial<Workflow>>({
+    name: '',
     description: '',
     status: 'draft',
     config: {
@@ -28,53 +59,33 @@ export default function WorkflowBuilderPage() {
       }
     }
   })
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null)
-  const [showPreview, setShowPreview] = useState(false)
-  const [loading, setLoading] = useState(false)
 
-  // Load workflow if ID is provided (from chat-generated workflow)
-  useEffect(() => {
-    if (workflowId && user && organization) {
-      loadWorkflow(workflowId)
+  React.useEffect(() => {
+    if (!authLoading && workflowId && organization) {
+      loadWorkflow()
+    } else {
+      setLoading(false)
     }
-  }, [workflowId, user, organization])
+  }, [authLoading, workflowId, organization])
 
-  const loadWorkflow = async (id: string) => {
-    setLoading(true)
+  async function loadWorkflow() {
+    if (!workflowId || !organization) return
+    
     try {
-      const { data: workflowData, error } = await supabase
+      const { data, error } = await supabase
         .from('workflows')
         .select('*')
-        .eq('id', id)
-        .eq('organization_id', organization?.id)
+        .eq('id', workflowId)
+        .eq('organization_id', organization.id)
         .single()
 
       if (error) {
         console.error('Error loading workflow:', error)
-        return
+      } else if (data) {
+        setWorkflow(data)
       }
-
-      // Handle both new and old data structures
-      const workflowConfig = workflowData.config || {
-        triggers: workflowData.triggers || [],
-        steps: workflowData.steps || [],
-        settings: {
-          notificationChannels: [],
-          errorHandling: 'stop',
-          maxRetries: 3,
-          timeoutMinutes: 60
-        }
-      };
-      
-      // Set workflow once to prevent flickering
-      const finalWorkflow = {
-        ...workflowData,
-        config: workflowConfig
-      };
-      
-      setWorkflow(finalWorkflow);
     } catch (error) {
-      console.error('Error loading workflow:', error)
+      console.error('Error:', error)
     } finally {
       setLoading(false)
     }
@@ -89,15 +100,6 @@ export default function WorkflowBuilderPage() {
       }
     }))
   }, [])
-
-  const handleNodeSelect = React.useCallback((node: Node | null) => {
-    setSelectedNode(node)
-  }, [])
-
-  function handleNodeUpdate(nodeId: string, updates: any) {
-    // Update the node data and sync back to workflow steps
-    console.log('Updating node:', nodeId, updates)
-  }
 
   async function handleSaveWorkflow() {
     if (!user || !organization) return
@@ -131,7 +133,6 @@ export default function WorkflowBuilderPage() {
       }
 
       if (workflowId) {
-        // Update existing workflow
         const { error } = await supabase
           .from('workflows')
           .update(workflowData)
@@ -144,7 +145,6 @@ export default function WorkflowBuilderPage() {
           console.log('Workflow updated successfully')
         }
       } else {
-        // Create new workflow
         const { data, error } = await supabase
           .from('workflows')
           .insert({
@@ -158,7 +158,6 @@ export default function WorkflowBuilderPage() {
           console.error('Error creating workflow:', error)
         } else {
           console.log('Workflow created successfully')
-          // Update URL to include the new workflow ID
           window.history.replaceState({}, '', `/workflows/builder?id=${data.id}`)
         }
       }
@@ -168,7 +167,6 @@ export default function WorkflowBuilderPage() {
   }
 
   function handlePublishWorkflow() {
-    // TODO: Implement publish functionality
     console.log('Publishing workflow:', workflow)
   }
 
@@ -176,21 +174,18 @@ export default function WorkflowBuilderPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">
-            {loading ? 'Loading workflow...' : 'Loading...'}
-          </p>
+          <div className="text-lg text-gray-600">Loading...</div>
         </div>
       </div>
     )
   }
 
-  if (!user) {
+  if (!user || !organization) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Please sign in</h1>
-          <p className="text-gray-600">You need to be logged in to build workflows.</p>
+          <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+          <p className="text-gray-600">Please log in to access the workflow builder.</p>
         </div>
       </div>
     )
@@ -198,7 +193,6 @@ export default function WorkflowBuilderPage() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -249,113 +243,36 @@ export default function WorkflowBuilderPage() {
             </button>
           </div>
         </div>
-
-        {/* Workflow Description */}
-        <div className="mt-3">
-          <input
-            type="text"
-            value={workflow.description || ''}
-            onChange={(e) => setWorkflow(prev => ({ ...prev, description: e.target.value }))}
-            className="w-full text-sm text-gray-600 bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
-            placeholder="Add a description for this workflow..."
-          />
-        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex">
-        {/* Component Palette */}
+      <div className="flex-1 flex overflow-hidden">
         <div className="w-80 bg-white border-r border-gray-200 flex-shrink-0">
           <ComponentPalette />
         </div>
 
-        {/* Canvas */}
-        <div className="flex-1">
-          <WorkflowCanvas
-            initialSteps={workflow.config?.steps || []}
-            onStepsChange={handleStepsChange}
-            onNodeSelect={handleNodeSelect}
-          />
+        <div className="flex-1 p-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-medium mb-4">Workflow Steps</h2>
+            <p className="text-gray-600">
+              Drag and drop components from the palette to build your workflow.
+            </p>
+            <div className="mt-6 space-y-2">
+              {(workflow.config?.steps || []).map((step, index) => (
+                <div key={step.id} className="p-4 border rounded">
+                  <h3 className="font-medium">Step {index + 1}: {step.name}</h3>
+                  <p className="text-sm text-gray-600">Type: {step.type}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {/* Configuration Panel */}
-        {(selectedNode || showPreview) && (
+        {showPreview && (
           <div className="w-96 bg-white border-l border-gray-200 flex-shrink-0">
-            {showPreview ? (
-              <WorkflowPreview workflow={workflow} />
-            ) : (
-              <div className="p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Step Configuration</h3>
-                {selectedNode ? (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Step Name</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedNode.data?.label || 'Unnamed Step'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Step Type</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedNode.data?.stepType || 'Unknown'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Description</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedNode.data?.description || 'No description'}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500">Select a step to configure</p>
-                )}
-              </div>
-            )}
+            <WorkflowPreview workflow={workflow} />
           </div>
         )}
       </div>
     </div>
   )
 }
-
-interface WorkflowPreviewProps {
-  workflow: Partial<Workflow>
-}
-
-function WorkflowPreview({ workflow }: WorkflowPreviewProps) {
-  return (
-    <div className="h-full p-6 overflow-y-auto">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">Workflow Preview</h3>
-      
-      <div className="space-y-4">
-        <div>
-          <h4 className="text-sm font-medium text-gray-700">Basic Info</h4>
-          <div className="mt-2 text-sm text-gray-600">
-            <p><strong>Name:</strong> {workflow.name || 'Untitled'}</p>
-            <p><strong>Description:</strong> {workflow.description || 'No description'}</p>
-            <p><strong>Status:</strong> {workflow.status}</p>
-          </div>
-        </div>
-
-        <div>
-          <h4 className="text-sm font-medium text-gray-700">Steps ({workflow.config?.steps?.length || 0})</h4>
-          <div className="mt-2 space-y-2">
-            {workflow.config?.steps?.map((step, index) => (
-              <div key={step.id} className="p-2 bg-gray-50 rounded text-sm">
-                <div className="font-medium">{index + 1}. {step.name}</div>
-                <div className="text-gray-500 text-xs">Type: {step.type}</div>
-              </div>
-            )) || (
-              <p className="text-sm text-gray-500">No steps added yet</p>
-            )}
-          </div>
-        </div>
-
-        <div>
-          <h4 className="text-sm font-medium text-gray-700">Settings</h4>
-          <div className="mt-2 text-sm text-gray-600">
-            <p><strong>Error Handling:</strong> {workflow.config?.settings?.errorHandling}</p>
-            <p><strong>Max Retries:</strong> {workflow.config?.settings?.maxRetries}</p>
-            <p><strong>Timeout:</strong> {workflow.config?.settings?.timeoutMinutes} minutes</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-

@@ -11,7 +11,15 @@ import { unreachable } from '~/utils/unreachable';
 
 const logger = createScopedLogger('FilesStore');
 
-const utf8TextDecoder = new TextDecoder('utf8', { fatal: true });
+// Lazy-initialize decoder to avoid global scope issues in Cloudflare Workers
+let utf8TextDecoder: TextDecoder;
+
+function getUtf8TextDecoder() {
+  if (!utf8TextDecoder) {
+    utf8TextDecoder = new TextDecoder('utf8', { fatal: true });
+  }
+  return utf8TextDecoder;
+}
 
 export interface File {
   type: 'file';
@@ -189,7 +197,7 @@ export class FilesStore {
     }
 
     try {
-      return utf8TextDecoder.decode(buffer);
+      return getUtf8TextDecoder().decode(buffer);
     } catch (error) {
       console.log(error);
       return '';

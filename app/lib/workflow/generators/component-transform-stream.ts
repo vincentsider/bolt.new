@@ -10,7 +10,10 @@ export class ComponentTransformStream extends TransformStream {
   constructor(organizationId: string, workflowDescription: string) {
     super({
       async transform(chunk, controller) {
-        const decoder = new TextDecoder();
+        let decoder: TextDecoder;
+        if (!decoder) {
+            decoder = new TextDecoder();
+        }
         const text = decoder.decode(chunk);
         
         // Always pass through the original chunk to maintain streaming
@@ -39,7 +42,10 @@ export class ComponentTransformStream extends TransformStream {
               if (processed.componentUsage.total > 0) {
                 // Send a comment about component usage
                 const comment = `\n<!-- Component Library: Used ${processed.componentUsage.fromLibrary} components from library, ${processed.componentUsage.fallback} fallback components -->\n`;
-                const encoder = new TextEncoder();
+                let encoder: TextEncoder;
+                if (!encoder) {
+                    encoder = new TextEncoder();
+                }
                 controller.enqueue(encoder.encode(comment));
                 
                 console.log(`✅ COMPONENT TRANSFORM: Injected ${processed.componentUsage.total} components`);

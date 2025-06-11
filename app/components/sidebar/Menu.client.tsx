@@ -1,6 +1,5 @@
 import { motion, type Variants } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { toast } from 'react-toastify';
 import { Dialog, DialogButton, DialogDescription, DialogRoot, DialogTitle } from '~/components/ui/Dialog';
 import { IconButton } from '~/components/ui/IconButton';
 import { ThemeSwitch } from '~/components/ui/ThemeSwitch';
@@ -44,7 +43,7 @@ export function Menu() {
       getAll(db)
         .then((list) => list.filter((item) => item.urlId && item.description))
         .then(setList)
-        .catch((error) => toast.error(error.message));
+        .catch((error) => console.error(error.message));
     }
   }, []);
 
@@ -62,7 +61,7 @@ export function Menu() {
           }
         })
         .catch((error) => {
-          toast.error('Failed to delete conversation');
+          console.error('Failed to delete conversation');
           logger.error(error);
         });
     }

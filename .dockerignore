@@ -1,0 +1,14 @@
+node_modules
+.git
+.gitignore
+.env.local
+.env
+build
+.cache
+.vscode
+.idea
+*.log
+.DS_Store
+functions
+.wrangler
+.cloudflare

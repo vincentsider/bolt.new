@@ -2,7 +2,6 @@ import { useLoaderData, useNavigate } from '@remix-run/react';
 import { useState, useEffect } from 'react';
 import { atom } from 'nanostores';
 import type { Message } from 'ai';
-import { toast } from 'react-toastify';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { getMessages, getNextId, getUrlId, openDatabase, setMessages } from './db';
 
@@ -34,7 +33,7 @@ export function useChatHistory() {
       setReady(true);
 
       if (persistenceEnabled) {
-        toast.error(`Chat persistence is unavailable`);
+        console.error(`Chat persistence is unavailable`);
       }
 
       return;
@@ -55,7 +54,7 @@ export function useChatHistory() {
           setReady(true);
         })
         .catch((error) => {
-          toast.error(error.message);
+          console.error(error.message);
         });
     }
   }, []);
