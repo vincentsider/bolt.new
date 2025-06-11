@@ -1,8 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import type { Workflow, WorkflowTrigger as DatabaseWorkflowTrigger } from '~/types/database'
 import type { WorkflowTrigger as TriggerLibraryWorkflowTrigger } from '~/types/trigger-library'
 import { TriggerConfiguration } from './TriggerConfiguration'
 import { useAuth } from '~/components/auth/AuthProvider'
+import { useStore } from '@nanostores/react'
+import { $componentInstances, workflowComponentActions } from '~/stores/workflow-components'
 
 interface WorkflowStepTabsProps {
   workflow: Partial<Workflow>
@@ -66,6 +68,9 @@ export function WorkflowStepTabs({ workflow, onWorkflowUpdate }: WorkflowStepTab
   const [activeStep, setActiveStep] = useState<'capture' | 'review' | 'approval' | 'update'>('capture')
   const [showTriggerConfig, setShowTriggerConfig] = useState(false)
   const [workflowTriggers, setWorkflowTriggers] = useState<TriggerLibraryWorkflowTrigger[]>([])
+  
+  // Subscribe to shared component instances store
+  const componentInstances = useStore($componentInstances)
 
   // Convert trigger library triggers to database triggers
   const convertToDbTrigger = (trigger: TriggerLibraryWorkflowTrigger): DatabaseWorkflowTrigger => {
@@ -76,89 +81,246 @@ export function WorkflowStepTabs({ workflow, onWorkflowUpdate }: WorkflowStepTab
       config: trigger.config || {}
     }
   }
-  const [stepData, setStepData] = useState<StepData>({
-    capture: {
-      title: 'Employee Information Capture',
-      assignedTeam: 'HR Department',
-      dataFields: [
-        { label: 'First Name', type: 'text', required: true },
-        { label: 'Last Name', type: 'text', required: true },
-        { label: 'Email Address', type: 'email', required: true },
-        { label: 'Department', type: 'dropdown', required: true },
-        { label: 'Start Date', type: 'date', required: true }
-      ],
-      checklistQuestions: [
-        { question: 'Has employee completed mandatory training?', type: 'yes_no', required: true },
-        { question: 'Background check status', type: 'multiple_choice', required: true, options: ['Pending', 'Completed', 'Not Required'] }
-      ],
-      fileUploads: [
-        { documentType: 'Photo ID', mandatory: true },
-        { documentType: 'Signed Contract', mandatory: true },
-        { documentType: 'Emergency Contact Form', mandatory: false }
-      ]
-    },
-    review: {
-      title: 'HR Manager Review',
-      assignedReviewers: ['HR Manager', 'Department Head'],
-      instructions: 'Review all submitted information for completeness and accuracy',
-      displayInfo: ['Personal Information', 'Documentation', 'Checklist Responses']
-    },
-    approval: {
-      title: 'Final Approval',
-      approvalType: 'multi_level',
-      approvingDepartment: ['HR Director', 'Department Manager'],
-      conditions: [
-        { rule: 'If salary > $100k, escalate to VP', escalation: 'VP Approval Required' },
-        { rule: 'If remote position, additional IT approval needed', escalation: 'IT Director' }
-      ]
-    },
-    update: {
-      title: 'System Integration',
-      targetSystems: ['HRIS System', 'Payroll System', 'Access Management'],
-      fieldsToSync: [
-        { source: 'Employee Name', destination: 'HRIS.employee_name' },
-        { source: 'Department', destination: 'HRIS.department' },
-        { source: 'Start Date', destination: 'Payroll.start_date' }
-      ],
-      triggers: ['After final approval', 'Before start date']
-    }
-  })
 
-  const updateStepData = (step: keyof StepData, data: any) => {
-    setStepData(prev => ({
-      ...prev,
-      [step]: { ...prev[step], ...data }
-    }))
+  // Generate step data from component instances
+  const generateStepDataFromComponents = (stepType: string) => {
+    const stepComponents = componentInstances.filter(comp => comp.stepType === stepType)
+    
+    if (stepComponents.length === 0) {
+      // Return default data when no components exist
+      return generateDefaultStepData(stepType)
+    }
+
+    // Convert component instances to step data format
+    switch (stepType) {
+      case 'capture':
+        return {
+          title: `${workflow.name || 'Workflow'} - Data Collection`,
+          assignedTeam: 'Relevant Team',
+          dataFields: stepComponents.map(comp => ({
+            label: comp.label,
+            type: mapComponentToFieldType(comp.componentId),
+            required: comp.required,
+            validation: comp.validation
+          })),
+          checklistQuestions: [],
+          fileUploads: stepComponents
+            .filter(comp => comp.componentId === 'file-upload')
+            .map(comp => ({
+              documentType: comp.label,
+              mandatory: comp.required
+            }))
+        }
+      
+      case 'review':
+        return {
+          title: `${workflow.name || 'Workflow'} - Review`,
+          assignedReviewers: ['Reviewer'],
+          instructions: 'Review submitted information',
+          displayInfo: ['Submitted Data']
+        }
+        
+      case 'approval':
+        return {
+          title: `${workflow.name || 'Workflow'} - Approval`,
+          approvalType: 'single',
+          approvingDepartment: ['Approver'],
+          conditions: []
+        }
+        
+      case 'update':
+        return {
+          title: `${workflow.name || 'Workflow'} - Integration`,
+          targetSystems: ['Target System'],
+          fieldsToSync: [],
+          triggers: ['After approval']
+        }
+        
+      default:
+        return generateDefaultStepData(stepType)
+    }
   }
 
-  const addDataField = () => {
-    if (!stepData.capture) return
-    const newField = { label: '', type: 'text' as const, required: false }
-    updateStepData('capture', {
-      dataFields: [...stepData.capture.dataFields, newField]
+  // Helper function to map component types to field types
+  const mapComponentToFieldType = (componentId: string): 'text' | 'dropdown' | 'date' | 'number' | 'email' | 'file' => {
+    switch (componentId) {
+      case 'short-text-box': return 'text'
+      case 'long-text-box': return 'text'
+      case 'email-input': return 'email'
+      case 'number-input': return 'number'
+      case 'date-picker': return 'date'
+      case 'dropdown-select': return 'dropdown'
+      case 'file-upload': return 'file'
+      default: return 'text'
+    }
+  }
+
+  // Generate default step data when no components exist
+  const generateDefaultStepData = (stepType: string) => {
+    const workflowName = workflow.name || 'New Workflow'
+    const isDefault = workflowName === 'New Workflow' || workflowName.includes('Employee')
+    
+    if (isDefault) {
+      // Generate dynamic defaults based on workflow name
+      const isFeedback = workflowName.toLowerCase().includes('feedback')
+      const isExpense = workflowName.toLowerCase().includes('expense')
+      
+      if (isFeedback && stepType === 'capture') {
+        return {
+          title: 'Feedback Collection',
+          assignedTeam: 'Customer Success Team',
+          dataFields: [
+            { label: 'Customer Name', type: 'text', required: true },
+            { label: 'Email Address', type: 'email', required: true },
+            { label: 'Product/Service', type: 'dropdown', required: true },
+            { label: 'Rating', type: 'number', required: true },
+            { label: 'Feedback Comments', type: 'text', required: true }
+          ],
+          checklistQuestions: [
+            { question: 'Would you recommend us?', type: 'yes_no', required: true },
+            { question: 'How did you hear about us?', type: 'multiple_choice', required: false, options: ['Website', 'Social Media', 'Referral', 'Advertisement'] }
+          ],
+          fileUploads: [
+            { documentType: 'Screenshots (optional)', mandatory: false }
+          ]
+        }
+      } else if (isExpense && stepType === 'capture') {
+        return {
+          title: 'Expense Submission',
+          assignedTeam: 'All Employees',
+          dataFields: [
+            { label: 'Employee Name', type: 'text', required: true },
+            { label: 'Amount', type: 'number', required: true },
+            { label: 'Category', type: 'dropdown', required: true },
+            { label: 'Description', type: 'text', required: true },
+            { label: 'Date', type: 'date', required: true }
+          ],
+          checklistQuestions: [
+            { question: 'Receipt attached?', type: 'yes_no', required: true }
+          ],
+          fileUploads: [
+            { documentType: 'Receipt', mandatory: true }
+          ]
+        }
+      }
+    }
+    
+    // Default generic step data
+    switch (stepType) {
+      case 'capture':
+        return {
+          title: workflowName + ' - Data Collection',
+          assignedTeam: 'Relevant Team',
+          dataFields: [
+            { label: 'Name', type: 'text', required: true },
+            { label: 'Email', type: 'email', required: true }
+          ],
+          checklistQuestions: [],
+          fileUploads: []
+        }
+      case 'review':
+        return {
+          title: workflowName + ' - Review',
+          assignedReviewers: ['Reviewer'],
+          instructions: 'Review submitted information',
+          displayInfo: ['Submitted Data']
+        }
+      case 'approval':
+        return {
+          title: workflowName + ' - Approval',
+          approvalType: 'single',
+          approvingDepartment: ['Approver'],
+          conditions: []
+        }
+      case 'update':
+        return {
+          title: workflowName + ' - Integration',
+          targetSystems: ['Target System'],
+          fieldsToSync: [],
+          triggers: ['After approval']
+        }
+      default:
+        return {}
+    }
+  }
+  // Get current step data from component instances or fallback to defaults
+  const getCurrentStepData = () => {
+    return {
+      capture: generateStepDataFromComponents('capture'),
+      review: generateStepDataFromComponents('review'),
+      approval: generateStepDataFromComponents('approval'),
+      update: generateStepDataFromComponents('update')
+    }
+  }
+
+  // Use dynamic step data that updates with component instances
+  const stepData = getCurrentStepData()
+
+  // Log when component instances change
+  useEffect(() => {
+    console.log('🔄 Component instances updated, 4-step builder will refresh:', componentInstances.length, 'components')
+    console.log('Component instances by step:', {
+      capture: componentInstances.filter(c => c.stepType === 'capture').length,
+      review: componentInstances.filter(c => c.stepType === 'review').length,
+      approval: componentInstances.filter(c => c.stepType === 'approval').length,
+      update: componentInstances.filter(c => c.stepType === 'update').length
     })
+  }, [componentInstances])
+
+  // Component-based editing functions
+  const addDataField = () => {
+    const newComponent = {
+      id: `comp-${Date.now()}`,
+      workflowId: workflow.id || 'temp-workflow',
+      componentId: 'short-text-box',
+      stepType: 'capture' as const,
+      label: 'New Field',
+      required: false,
+      config: { type: 'text' },
+      validation: {},
+      position: { step: 1, order: (componentInstances.filter(c => c.stepType === 'capture').length + 1) },
+      dataMapping: {},
+      styling: {}
+    }
+    workflowComponentActions.addComponentInstance(newComponent)
   }
 
   const removeDataField = (index: number) => {
-    if (!stepData.capture) return
-    const fields = stepData.capture.dataFields.filter((_, i) => i !== index)
-    updateStepData('capture', { dataFields: fields })
+    const captureComponents = componentInstances.filter(c => c.stepType === 'capture')
+    if (captureComponents[index]) {
+      workflowComponentActions.removeComponentInstance(captureComponents[index].id)
+    }
+  }
+
+  const updateDataField = (index: number, field: string, value: any) => {
+    const captureComponents = componentInstances.filter(c => c.stepType === 'capture')
+    if (captureComponents[index]) {
+      workflowComponentActions.updateComponentInstance(captureComponents[index].id, {
+        [field]: value
+      })
+    }
   }
 
   const addChecklistQuestion = () => {
-    if (!stepData.capture) return
-    const newQuestion = { question: '', type: 'yes_no' as const, required: false }
-    updateStepData('capture', {
-      checklistQuestions: [...stepData.capture.checklistQuestions, newQuestion]
-    })
+    // For now, just add a placeholder - this could be enhanced to create checklist components
+    console.log('Adding checklist question - component implementation needed')
   }
 
   const addFileUpload = () => {
-    if (!stepData.capture) return
-    const newUpload = { documentType: '', mandatory: false }
-    updateStepData('capture', {
-      fileUploads: [...stepData.capture.fileUploads, newUpload]
-    })
+    const newComponent = {
+      id: `comp-${Date.now()}`,
+      workflowId: workflow.id || 'temp-workflow',
+      componentId: 'file-upload',
+      stepType: 'capture' as const,
+      label: 'New File Upload',
+      required: false,
+      config: { accept: '*', maxSize: '10MB' },
+      validation: {},
+      position: { step: 1, order: (componentInstances.filter(c => c.stepType === 'capture').length + 1) },
+      dataMapping: {},
+      styling: {}
+    }
+    workflowComponentActions.addComponentInstance(newComponent)
   }
 
   const renderProgressBar = () => {
@@ -258,21 +420,13 @@ export function WorkflowStepTabs({ workflow, onWorkflowUpdate }: WorkflowStepTab
                 <input
                   type="text"
                   value={field.label}
-                  onChange={(e) => {
-                    const fields = [...data.dataFields]
-                    fields[index] = { ...field, label: e.target.value }
-                    updateStepData('capture', { dataFields: fields })
-                  }}
+                  onChange={(e) => updateDataField(index, 'label', e.target.value)}
                   className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
                   placeholder="Field Label"
                 />
                 <select
                   value={field.type}
-                  onChange={(e) => {
-                    const fields = [...data.dataFields]
-                    fields[index] = { ...field, type: e.target.value as any }
-                    updateStepData('capture', { dataFields: fields })
-                  }}
+                  onChange={(e) => updateDataField(index, 'config', { ...componentInstances.filter(c => c.stepType === 'capture')[index]?.config, type: e.target.value })}
                   className="px-2 py-1 border border-gray-300 rounded text-sm"
                 >
                   <option value="text">Text</option>
@@ -286,11 +440,7 @@ export function WorkflowStepTabs({ workflow, onWorkflowUpdate }: WorkflowStepTab
                   <input
                     type="checkbox"
                     checked={field.required}
-                    onChange={(e) => {
-                      const fields = [...data.dataFields]
-                      fields[index] = { ...field, required: e.target.checked }
-                      updateStepData('capture', { dataFields: fields })
-                    }}
+                    onChange={(e) => updateDataField(index, 'required', e.target.checked)}
                     className="mr-1"
                   />
                   Required
@@ -690,7 +840,19 @@ export function WorkflowStepTabs({ workflow, onWorkflowUpdate }: WorkflowStepTab
       <div className="max-w-4xl mx-auto p-6">
         {/* Trigger Configuration Header */}
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Workflow Builder</h2>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Workflow Builder</h2>
+            {componentInstances.length > 0 && (
+              <div className="flex items-center gap-2 mt-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  🧩 Component-Based ({componentInstances.length} components)
+                </span>
+                <span className="text-sm text-gray-600">
+                  Synchronized with Live Preview
+                </span>
+              </div>
+            )}
+          </div>
           <button
             onClick={() => setShowTriggerConfig(true)}
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm font-medium"

@@ -72,7 +72,8 @@ export default function Dashboard() {
                   Welcome to WorkflowHub! 🎉
                 </h2>
                 <p className="text-gray-600 mb-6">
-                  Your no-code workflow automation platform is ready.
+                  Your no-code workflow automation platform is ready.<br/>
+                  Create workflows using AI chat that generate real Node.js applications.
                 </p>
                 
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-w-md mx-auto">
@@ -84,14 +85,50 @@ export default function Dashboard() {
                     <li>• Organization: {organization?.name}</li>
                     <li>• Role: {profile.role}</li>
                   </ul>
+                  <div className="mt-2 text-xs text-gray-500">
+                    Debug: Role check for button = {profile.role === 'builder' || profile.role === 'sysadmin' ? 'PASS' : 'FAIL'} (role: {profile.role})
+                  </div>
+                </div>
+
+                <div className="mt-6 mb-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-lg mx-auto">
+                    <h4 className="font-semibold text-blue-800 mb-2">🚀 What happens next?</h4>
+                    <ol className="text-sm text-blue-700 space-y-1 text-left list-decimal list-inside">
+                      <li>Click "Create Workflow" to open the WebContainer builder</li>
+                      <li>Chat with the AI to describe your workflow needs</li>
+                      <li>Watch as it generates a complete Node.js application</li>
+                      <li>Use the visual builder to refine the workflow steps</li>
+                      <li>Preview the running application in your browser</li>
+                      <li>Download the complete app for deployment</li>
+                    </ol>
+                  </div>
                 </div>
 
                 <div className="mt-6 space-x-4">
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
-                    Create Workflow
+                  <button 
+                    onClick={() => navigate('/workflows/webcontainer-builder')}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  >
+                    🚀 Create Workflow (WebContainer)
                   </button>
-                  <button className="bg-gray-200 hover:bg-gray-300 text-gray-900 px-4 py-2 rounded-md text-sm font-medium">
-                    View Templates
+                  <button 
+                    onClick={() => navigate('/workflows')}
+                    className="bg-gray-200 hover:bg-gray-300 text-gray-900 px-4 py-2 rounded-md text-sm font-medium"
+                  >
+                    📋 View All Workflows
+                  </button>
+                  <button 
+                    onClick={() => {
+                      console.log('Component Library clicked');
+                      console.log('Organization ID:', organization?.id);
+                      console.log('Profile role:', profile.role);
+                      const url = `/components-admin?org=${organization?.id}`;
+                      console.log('Navigating to:', url);
+                      navigate(url);
+                    }}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  >
+                    🧩 Component Library
                   </button>
                 </div>
               </div>

@@ -15,8 +15,42 @@ export async function action({ context, request }: ActionFunctionArgs) {
 
   console.log('Workflow chat API called')
   
-  const { messages } = await request.json<{ messages: Messages }>();
+  const { messages, triggerContext, organizationId } = await request.json<{ 
+    messages: Messages, 
+    triggerContext?: any,
+    organizationId?: string 
+  }>();
   console.log('Received messages:', messages.length)
+  console.log('Trigger context:', triggerContext)
+  console.log('Organization ID:', organizationId)
+  
+  // Fetch component library information for AI context
+  let componentLibraryContext = ''
+  if (organizationId) {
+    try {
+      // For now, we'll include basic component library info in the prompt
+      // Later this should fetch from the actual database
+      componentLibraryContext = `
+
+COMPONENT LIBRARY CONTEXT:
+Available components for this organization:
+- Short Text Box (for names, emails, simple text)
+- Long Text Box (for descriptions, comments)
+- Number Field (for amounts, quantities)
+- Date Picker (for dates, deadlines)
+- Drop-down List (for categories, selections)
+- File Upload (for documents, receipts)
+- Approve/Reject Buttons (for approval decisions)
+- Currency & Amount (for monetary values)
+- Multi-Select List (for multiple choices)
+- Yes/No Buttons (for binary decisions)
+
+USE THESE COMPONENTS: When generating workflow code, you MUST use these pre-defined components rather than creating custom HTML forms. Map user requirements to appropriate components from this library.
+`
+    } catch (error) {
+      console.log('Could not fetch component library context:', error)
+    }
+  }
 
   // Analyze the conversation to determine if this is a modification request
   const isModificationRequest = (() => {
@@ -106,6 +140,14 @@ export async function action({ context, request }: ActionFunctionArgs) {
 
     console.log('Using workflow prompt for', isModificationRequest ? 'MODIFICATION request' : 'NEW workflow request', 'with', messages.length, 'messages')
     console.log('API key available:', !!context.cloudflare.env.ANTHROPIC_API_KEY)
+    
+    // Include component library context in the last user message
+    if (componentLibraryContext && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1]
+      if (lastMessage.role === 'user') {
+        lastMessage.content += componentLibraryContext
+      }
+    }
     
     // Always use workflow chat - it handles both new workflows and modifications
     const result = await streamWorkflowText(messages, context.cloudflare.env, options);

@@ -2,7 +2,9 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useAuth } from '~/components/auth/AuthProvider'
 import type { Workflow, WorkflowStep } from '~/types/database'
 import { TriggerMapper } from '~/lib/ai/trigger-mapper'
+import { ComponentMapper } from '~/lib/ai/component-mapper'
 import type { TriggerConversation, TriggerTemplate } from '~/types/trigger-library'
+import { workflowComponentActions, type ComponentInstance, $workflowStyling, type WorkflowStyling } from '~/stores/workflow-components'
 
 interface WorkflowChatProps {
   workflow: Partial<Workflow>
@@ -19,6 +21,340 @@ interface ChatMessage {
   content: string
   timestamp: Date
   triggerConversation?: TriggerConversation
+}
+
+// Chat command processing functions
+interface CommandResult {
+  type: 'component' | 'styling' | 'structural' | 'none'
+  action: string
+  data: any
+}
+
+function parseUserCommand(input: string): CommandResult {
+  const lowerInput = input.toLowerCase()
+  
+  // Component modification commands
+  if (lowerInput.includes('add') && (lowerInput.includes('field') || lowerInput.includes('input'))) {
+    return {
+      type: 'component',
+      action: 'add',
+      data: parseAddFieldCommand(input)
+    }
+  }
+  
+  if (lowerInput.includes('make') && lowerInput.includes('optional')) {
+    return {
+      type: 'component', 
+      action: 'update',
+      data: { field: 'required', value: false, target: parseFieldTarget(input) }
+    }
+  }
+  
+  if (lowerInput.includes('make') && lowerInput.includes('required')) {
+    return {
+      type: 'component',
+      action: 'update', 
+      data: { field: 'required', value: true, target: parseFieldTarget(input) }
+    }
+  }
+  
+  if (lowerInput.includes('remove') || lowerInput.includes('delete')) {
+    return {
+      type: 'component',
+      action: 'remove',
+      data: { target: parseFieldTarget(input) }
+    }
+  }
+  
+  // Styling commands
+  if (lowerInput.includes('color') || lowerInput.includes('background')) {
+    return {
+      type: 'styling',
+      action: 'update',
+      data: parseColorCommand(input)
+    }
+  }
+  
+  if (lowerInput.includes('button') && (lowerInput.includes('bigger') || lowerInput.includes('larger'))) {
+    return {
+      type: 'styling',
+      action: 'update',
+      data: { buttons: { size: 'large' } }
+    }
+  }
+  
+  if (lowerInput.includes('font') || lowerInput.includes('text size')) {
+    return {
+      type: 'styling',
+      action: 'update',
+      data: parseFontCommand(input)
+    }
+  }
+  
+  return { type: 'none', action: '', data: {} }
+}
+
+function parseAddFieldCommand(input: string): any {
+  const lowerInput = input.toLowerCase()
+  
+  if (lowerInput.includes('email')) {
+    return {
+      componentId: 'email-input',
+      label: 'Email Address',
+      type: 'email'
+    }
+  }
+  
+  if (lowerInput.includes('phone')) {
+    return {
+      componentId: 'short-text-box',
+      label: 'Phone Number', 
+      type: 'tel'
+    }
+  }
+  
+  if (lowerInput.includes('file') || lowerInput.includes('upload')) {
+    return {
+      componentId: 'file-upload',
+      label: 'File Upload',
+      type: 'file'
+    }
+  }
+  
+  // Default text field
+  return {
+    componentId: 'short-text-box',
+    label: 'New Field',
+    type: 'text'
+  }
+}
+
+function parseFieldTarget(input: string): string {
+  const lowerInput = input.toLowerCase()
+  
+  if (lowerInput.includes('name')) return 'name'
+  if (lowerInput.includes('email')) return 'email'  
+  if (lowerInput.includes('phone')) return 'phone'
+  if (lowerInput.includes('customer')) return 'customer'
+  
+  return 'field'
+}
+
+function parseColorCommand(input: string): Partial<WorkflowStyling> {
+  const lowerInput = input.toLowerCase()
+  
+  if (lowerInput.includes('blue')) {
+    return { theme: { primaryColor: '#007bff' } }
+  }
+  
+  if (lowerInput.includes('green')) {
+    return { theme: { primaryColor: '#28a745' } }
+  }
+  
+  if (lowerInput.includes('red')) {
+    return { theme: { primaryColor: '#dc3545' } }
+  }
+  
+  if (lowerInput.includes('background') && lowerInput.includes('dark')) {
+    return { theme: { backgroundColor: '#343a40' } }
+  }
+  
+  return {}
+}
+
+function parseFontCommand(input: string): Partial<WorkflowStyling> {
+  const lowerInput = input.toLowerCase()
+  
+  if (lowerInput.includes('larger') || lowerInput.includes('bigger')) {
+    return { theme: { fontSize: '16px' } }
+  }
+  
+  if (lowerInput.includes('smaller')) {
+    return { theme: { fontSize: '12px' } }
+  }
+  
+  if (lowerInput.includes('arial')) {
+    return { theme: { fontFamily: 'Arial, sans-serif' } }
+  }
+  
+  return {}
+}
+
+// NEW: Function to analyze user request and create component instances
+async function createComponentInstancesFromRequest(
+  userInput: string, 
+  organizationId: string,
+  workflowId: string,
+  onWorkflowUpdate: (workflow: Partial<Workflow>) => void
+): Promise<{[stepName: string]: any[]}> {
+  try {
+    console.log('🔍 Creating component instances from user request...')
+    
+    // Initialize component mapper
+    const componentMapper = new ComponentMapper(organizationId)
+    
+    // Analyze user input for components across all steps
+    const captureMapping = await componentMapper.mapComponents(userInput, 'capture')
+    const reviewMapping = await componentMapper.mapComponents(userInput, 'review')
+    const approvalMapping = await componentMapper.mapComponents(userInput, 'approval')
+    const updateMapping = await componentMapper.mapComponents(userInput, 'update')
+    
+    // Convert mappings to component instances
+    const captureComponents = captureMapping.matches.map((comp, index) => ({
+      id: `comp-capture-${index}`,
+      workflowId,
+      componentId: comp.id,
+      stepType: 'capture' as const,
+      label: comp.name,
+      required: true,
+      config: comp.component_type === 'file-upload' ? { accept: '*', maxSize: '10MB' } : {},
+      validation: {},
+      position: { step: 1, order: index + 1 },
+      dataMapping: {},
+      styling: {}
+    }))
+    
+    const reviewComponents = reviewMapping.matches.map((comp, index) => ({
+      id: `comp-review-${index}`,
+      workflowId,
+      componentId: comp.id,
+      stepType: 'review' as const,
+      label: comp.name,
+      required: true,
+      config: {},
+      validation: {},
+      position: { step: 2, order: index + 1 },
+      dataMapping: {},
+      styling: {}
+    }))
+    
+    const approvalComponents = approvalMapping.matches.map((comp, index) => ({
+      id: `comp-approval-${index}`,
+      workflowId,
+      componentId: comp.id,
+      stepType: 'approval' as const,
+      label: comp.name,
+      required: true,
+      config: {},
+      validation: {},
+      position: { step: 3, order: index + 1 },
+      dataMapping: {},
+      styling: {}
+    }))
+    
+    const updateComponents = updateMapping.matches.map((comp, index) => ({
+      id: `comp-update-${index}`,
+      workflowId,
+      componentId: comp.id,
+      stepType: 'update' as const,
+      label: comp.name,
+      required: true,
+      config: {},
+      validation: {},
+      position: { step: 4, order: index + 1 },
+      dataMapping: {},
+      styling: {}
+    }))
+    
+    console.log('📋 Component instances created:')
+    console.log('- Capture:', captureComponents.length, 'components')
+    console.log('- Review:', reviewComponents.length, 'components')
+    console.log('- Approval:', approvalComponents.length, 'components')
+    console.log('- Update:', updateComponents.length, 'components')
+    
+    // Helper function to map component IDs to field types
+    const mapComponentToFieldType = (componentId: string): string => {
+      switch (componentId) {
+        case 'short-text-box': return 'text'
+        case 'long-text-box': return 'text'
+        case 'email-input': return 'email'
+        case 'number-input': return 'number'
+        case 'date-picker': return 'date'
+        case 'dropdown-select': return 'dropdown'
+        case 'file-upload': return 'file'
+        default: return 'text'
+      }
+    }
+    
+    // Create workflow steps from component instances
+    const workflowSteps: WorkflowStep[] = []
+    
+    if (captureComponents.length > 0) {
+      // Convert component instances to fields format for WebContainer builder
+      const fields = captureComponents.map(comp => ({
+        name: comp.label.toLowerCase().replace(/\s+/g, '_'),
+        label: comp.label,
+        type: mapComponentToFieldType(comp.componentId),
+        required: comp.required,
+        validation: comp.validation || {}
+      }))
+      
+      workflowSteps.push({
+        id: 'step-1-capture',
+        name: 'Data Capture',
+        type: 'capture',
+        description: 'Collect required information and documents',
+        config: {
+          fields
+        },
+        nextSteps: [{ stepId: 'step-2-review' }]
+      })
+    }
+    
+    // Always add review, approval, and update steps for complete workflow
+    workflowSteps.push({
+      id: 'step-2-review',
+      name: 'Review & Validation',
+      type: 'review',
+      description: 'Review submitted information for accuracy',
+      config: {
+        reviewers: ['reviewer'],
+        instructions: 'Review the submitted information'
+      },
+      nextSteps: [{ stepId: 'step-3-approval' }]
+    })
+    
+    workflowSteps.push({
+      id: 'step-3-approval',
+      name: 'Approval Decision',
+      type: 'approve',
+      description: 'Formal approval or rejection',
+      config: {
+        approvers: ['manager'],
+        conditions: []
+      },
+      nextSteps: [{ stepId: 'step-4-update' }]
+    })
+    
+    workflowSteps.push({
+      id: 'step-4-update',
+      name: 'System Integration',
+      type: 'update',
+      description: 'Update external systems and send notifications',
+      config: {
+        integrations: [],
+        notifications: true
+      },
+      nextSteps: []
+    })
+    
+    // Update the workflow with component-based steps
+    if (workflowSteps.length > 0) {
+      console.log('🔄 Updating workflow with component-based steps')
+      // This will be called from the parent to update both views
+    }
+    
+    return {
+      capture: captureComponents,
+      review: reviewComponents,
+      approval: approvalComponents,
+      update: updateComponents
+    }
+    
+  } catch (error) {
+    console.error('Failed to create component instances:', error)
+    return {}
+  }
 }
 
 export function WorkflowChat({ workflow, onWorkflowUpdate, onCodeUpdate, onFilesUpdate, initialInput, forceFresh = false }: WorkflowChatProps) {
@@ -135,6 +471,14 @@ What would you like me to do with this workflow?`,
   const [isGeneratingWorkflow, setIsGeneratingWorkflow] = useState(false)
   const [generatedArtifact, setGeneratedArtifact] = useState<string>('')
   const [workflowFiles, setWorkflowFiles] = useState<{[key: string]: string}>({})
+  
+  // Handle files update to parent
+  useEffect(() => {
+    if (Object.keys(workflowFiles).length > 0) {
+      console.log('🚀 UPDATING FILES: Triggering live preview refresh')
+      onFilesUpdate(workflowFiles)
+    }
+  }, [workflowFiles, onFilesUpdate])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [progressInfo, setProgressInfo] = useState<{
@@ -281,6 +625,118 @@ What would you like me to do with this workflow?`,
     await handleSubmitDirect()
   }
 
+  // Process direct commands without AI
+  const processDirectCommand = async (command: CommandResult, userInput: string) => {
+    try {
+      let responseMessage = ''
+      
+      if (command.type === 'component') {
+        responseMessage = await handleComponentCommand(command, userInput)
+      } else if (command.type === 'styling') {
+        responseMessage = await handleStylingCommand(command, userInput)
+      }
+      
+      // Add immediate response
+      const assistantMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: responseMessage,
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, assistantMessage])
+      
+      // Regenerate live preview from updated components
+      if (command.type === 'component' || command.type === 'styling') {
+        console.log('🔄 Regenerating code from updated component instances')
+        const { html, css } = workflowComponentActions.regenerateWorkflowCode()
+        onCodeUpdate(html)
+        onFilesUpdate({ 'index.html': html, 'style.css': css })
+      }
+      
+    } catch (error) {
+      console.error('Error processing direct command:', error)
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant', 
+        content: 'Sorry, I encountered an error processing that command. Please try again.',
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, errorMessage])
+    }
+  }
+
+  const handleComponentCommand = async (command: CommandResult, userInput: string): Promise<string> => {
+    const { action, data } = command
+    
+    if (action === 'add') {
+      const newComponent: ComponentInstance = {
+        id: `comp-${Date.now()}`,
+        workflowId: workflow.id || 'temp-workflow',
+        componentId: data.componentId,
+        stepType: 'capture',
+        label: data.label,
+        required: true,
+        config: { type: data.type, placeholder: '' },
+        validation: {},
+        position: { step: 1, order: (workflowComponentActions.getComponentsForStep('capture').length + 1) },
+        dataMapping: {},
+        styling: {}
+      }
+      
+      workflowComponentActions.addComponentInstance(newComponent)
+      return `✅ Added "${data.label}" field to your workflow. You can see it in both the Live Preview and 4-Step Builder.`
+    }
+    
+    if (action === 'update') {
+      const targetField = data.target
+      const instances = workflowComponentActions.getComponentsForStep('capture')
+      const targetInstance = instances.find(inst => 
+        inst.label.toLowerCase().includes(targetField) || 
+        inst.config.type === targetField
+      )
+      
+      if (targetInstance) {
+        workflowComponentActions.updateComponentInstance(targetInstance.id, {
+          [data.field]: data.value
+        })
+        return `✅ Updated "${targetInstance.label}" - made it ${data.value ? 'required' : 'optional'}.`
+      } else {
+        return `❌ Could not find a field matching "${targetField}". Please be more specific.`
+      }
+    }
+    
+    if (action === 'remove') {
+      const targetField = data.target
+      const instances = workflowComponentActions.getComponentsForStep('capture')
+      const targetInstance = instances.find(inst => 
+        inst.label.toLowerCase().includes(targetField)
+      )
+      
+      if (targetInstance) {
+        workflowComponentActions.removeComponentInstance(targetInstance.id)
+        return `✅ Removed "${targetInstance.label}" field from your workflow.`
+      } else {
+        return `❌ Could not find a field matching "${targetField}". Please be more specific.`
+      }
+    }
+    
+    return 'Command processed.'
+  }
+
+  const handleStylingCommand = async (command: CommandResult, userInput: string): Promise<string> => {
+    const { data } = command
+    
+    workflowComponentActions.updateWorkflowStyling(data)
+    
+    let message = '✅ Updated workflow styling:'
+    if (data.theme?.primaryColor) message += ` Changed primary color to ${data.theme.primaryColor}.`
+    if (data.theme?.backgroundColor) message += ` Changed background color.`
+    if (data.theme?.fontSize) message += ` Updated font size.`
+    if (data.buttons?.size) message += ` Made buttons ${data.buttons.size}.`
+    
+    return message + ' Check the Live Preview to see the changes!'
+  }
+
   const processWorkflowRequest = async (userInput: string, triggerQuestions: string[], detectedTrigger?: TriggerTemplate) => {
 
     const userMessage: ChatMessage = {
@@ -306,6 +762,16 @@ What would you like me to do with this workflow?`,
     try {
       console.log('Sending workflow chat request...')
       console.log('Current conversation has', messages.length + 1, 'messages')
+      
+      // FIRST: Check if this is a quick command that can be processed directly
+      const command = parseUserCommand(userInput)
+      console.log('🔍 Parsed command:', command)
+      
+      if (command.type !== 'none') {
+        console.log('⚡ Processing direct command:', command.type, command.action)
+        await processDirectCommand(command, userInput)
+        return // Skip AI processing for direct commands
+      }
       
       // Check if user is asking about triggers
       let triggerQuestions: string[] = []
@@ -360,7 +826,7 @@ What would you like me to do with this workflow?`,
         userMessageContent = `<workflowhub_file_modifications>\n${fileModifications}\n</workflowhub_file_modifications>\n\n${input.trim()}`
       }
       
-      const response = await fetch('/api/workflow-chat', {
+      const response = await fetch('/api/workflow-chat-v2', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -373,7 +839,8 @@ What would you like me to do with this workflow?`,
           triggerContext: {
             detectedTrigger,
             triggerQuestions
-          }
+          },
+          organizationId: organization?.id
         }),
       })
 
@@ -454,12 +921,7 @@ What would you like me to do with this workflow?`,
       const extractedFiles = extractFilesFromResponse(cleanedContent)
       if (Object.keys(extractedFiles).length > 0) {
         console.log('📁 EXTRACTED FILES:', Object.keys(extractedFiles))
-        setWorkflowFiles(prev => {
-          const updatedFiles = { ...prev, ...extractedFiles }
-          console.log('🚀 UPDATING FILES: Triggering live preview refresh')
-          onFilesUpdate(updatedFiles)
-          return updatedFiles
-        })
+        setWorkflowFiles(prev => ({ ...prev, ...extractedFiles }))
       }
       
       // Send the cleaned generated code to the parent - FORCE FINAL UPDATE
@@ -475,6 +937,27 @@ What would you like me to do with this workflow?`,
 
       // Parse the response for workflow updates using cleaned content
       const workflowUpdated = parseWorkflowUpdates(cleanedContent)
+
+      // Create component instances from user request
+      if (organization?.id && !isModificationRequest) {
+        try {
+          const componentInstances = await createComponentInstancesFromRequest(
+            userInput, 
+            organization.id, 
+            workflow.id || 'temp-workflow-id',
+            onWorkflowUpdate
+          )
+          
+          // Store component instances in shared store for both views
+          const allComponents = Object.values(componentInstances).flat() as ComponentInstance[]
+          workflowComponentActions.setComponentInstances(allComponents)
+          console.log('💾 Component instances stored in shared store:', allComponents.length)
+          
+        } catch (error) {
+          console.error('Component instance creation failed:', error)
+          // Continue without component instances if tables don't exist
+        }
+      }
 
       // Show completion progress
       setProgressInfo(prev => ({
@@ -968,39 +1451,75 @@ The workflow is visible in the live preview on the right. What would you like me
     
     console.log('Extracting form fields from server code...')
     
-    // Look for common form field patterns in the expense workflow
-    const fieldPatterns = [
-      { name: 'employee_name', type: 'text', pattern: /employee_name/i, label: 'Employee Name' },
-      { name: 'employee_email', type: 'email', pattern: /employee_email/i, label: 'Employee Email' },
-      { name: 'amount', type: 'number', pattern: /amount.*parseFloat|amount.*number/i, label: 'Amount ($)' },
-      { name: 'category', type: 'select', pattern: /category.*select|category.*option/i, label: 'Expense Category' },
-      { name: 'description', type: 'textarea', pattern: /description.*textarea|description.*text/i, label: 'Description' },
-      { name: 'manager_email', type: 'email', pattern: /manager_email/i, label: 'Manager Email' },
-      { name: 'receipt', type: 'file', pattern: /receipt.*upload|multer.*receipt/i, label: 'Receipt Upload' }
+    // Extract fields from req.body destructuring or form parsing
+    const patterns = [
+      // Look for const { field1, field2 } = req.body;
+      /const\s*{\s*([^}]+)\s*}\s*=\s*req\.body/g,
+      // Look for req.body.fieldName
+      /req\.body\.(\w+)/g,
+      // Look for HTML input names
+      /name=["'](\w+)["']/g
     ]
-
-    fieldPatterns.forEach(field => {
-      if (field.pattern.test(serverCode)) {
-        console.log(`Found field: ${field.name}`)
+    
+    const foundFields = new Set<string>()
+    
+    patterns.forEach(pattern => {
+      let match
+      while ((match = pattern.exec(serverCode)) !== null) {
+        if (match[1]) {
+          // Handle destructuring (might have multiple fields)
+          if (match[0].includes('{')) {
+            const fieldsInMatch = match[1].split(',').map(f => f.trim())
+            fieldsInMatch.forEach(field => {
+              if (field && !field.includes('...') && field.length > 0) {
+                foundFields.add(field.toLowerCase())
+              }
+            })
+          } else {
+            // Single field
+            foundFields.add(match[1].toLowerCase())
+          }
+        }
+      }
+    })
+    
+    // Convert found fields to proper format
+    Array.from(foundFields).forEach(fieldName => {
+      if (fieldName && fieldName !== 'body') {
+        console.log(`Found field: ${fieldName}`)
+        
+        // Determine field type based on name
+        let type = 'text'
+        if (fieldName.includes('email')) type = 'email'
+        else if (fieldName.includes('amount') || fieldName.includes('price') || fieldName.includes('cost')) type = 'number'
+        else if (fieldName.includes('date')) type = 'date'
+        else if (fieldName.includes('file') || fieldName.includes('upload') || fieldName.includes('receipt')) type = 'file'
+        else if (fieldName.includes('category') || fieldName.includes('type') || fieldName.includes('status')) type = 'dropdown'
+        
+        // Create nice label from field name
+        const label = fieldName.split('_').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ')
+        
         fields.push({
-          name: field.name,
-          type: field.type,
+          name: fieldName,
+          type: type,
           required: true,
-          label: field.label,
-          validation: field.type === 'email' ? { format: 'email' } : 
-                     field.type === 'number' ? { min: 0, step: 0.01 } : 
-                     field.type === 'file' ? { accept: 'image/*,.pdf' } : {}
+          label: label,
+          validation: type === 'email' ? { format: 'email' } : 
+                     type === 'number' ? { min: 0, step: 0.01 } : 
+                     type === 'file' ? { accept: 'image/*,.pdf' } : {}
         })
       }
     })
 
-    // If no specific fields found, add generic expense fields
+    // If no specific fields found, add generic form fields
     if (fields.length === 0) {
-      console.log('No specific fields found, adding default expense fields')
+      console.log('No specific fields found, adding default form fields')
       fields.push(
-        { name: 'amount', type: 'number', required: true, label: 'Amount ($)', validation: { min: 0, step: 0.01 } },
-        { name: 'description', type: 'textarea', required: true, label: 'Description' },
-        { name: 'category', type: 'select', required: true, label: 'Category' }
+        { name: 'name', type: 'text', required: true, label: 'Name', validation: {} },
+        { name: 'email', type: 'email', required: true, label: 'Email', validation: { format: 'email' } },
+        { name: 'message', type: 'text', required: true, label: 'Message', validation: {} }
       )
     }
 

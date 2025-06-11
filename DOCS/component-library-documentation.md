@@ -233,6 +233,150 @@ Located at `/admin/components`, the admin interface provides:
    }
    ```
 
+## How Components Work with Code Generation
+
+### The Template-Based Architecture
+
+**CRITICAL CONCEPT**: Components in WorkflowHub are **pre-built HTML/CSS/JS templates** stored in the database, NOT code that gets written from scratch.
+
+#### Component Storage Structure
+
+Each component in the `component_definitions` table contains:
+
+```typescript
+{
+  id: "short-text-input",
+  name: "Short Text Box",
+  htmlTemplate: `
+    <div class="form-group">
+      <label for="{{id}}" class="form-label">{{label}}</label>
+      <input 
+        type="{{type}}" 
+        id="{{id}}" 
+        name="{{name}}"
+        class="form-control {{cssClass}}"
+        placeholder="{{placeholder}}"
+        {{#if required}}required{{/if}}
+        {{#if validation}}{{validation}}{{/if}}
+      />
+      {{#if helpText}}
+        <div class="form-help">{{helpText}}</div>
+      {{/if}}
+    </div>
+  `,
+  cssClasses: ["form-group", "form-control", "form-label"],
+  jsValidation: `
+    function validateEmail(value) {
+      const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+      return emailRegex.test(value);
+    }
+  `
+}
+```
+
+#### The AI + Template Process
+
+```
+User Input: "collect employee email address"
+    ↓
+1. AI analyzes: "email" → selects "Short Text Box" component
+2. AI gets htmlTemplate from database
+3. AI fills template variables:
+   - {{label}} → "Employee Email"
+   - {{type}} → "email"
+   - {{required}} → true
+   - {{validation}} → "pattern=\"[^@]+@[^@]+\""
+4. AI generates final HTML code using filled template
+5. Live Preview shows actual working form
+```
+
+#### Why "ALWAYS use components from library"
+
+This instruction means:
+
+❌ **NEVER write custom HTML:**
+```html
+<input type="email" placeholder="Enter email">
+```
+
+✅ **ALWAYS use component templates:**
+```javascript
+// AI process:
+1. Select component: "email-input" 
+2. Get template from database
+3. Fill variables: {{type}} = "email", {{label}} = "Employee Email"
+4. Output rendered HTML using template
+```
+
+#### Code Generation Workflow
+
+```
+User Request → Component Selection → Template Retrieval → Variable Filling → Code Output
+     ↓              ↓                    ↓                  ↓               ↓
+"collect email" → "Short Text Box" → htmlTemplate → {{label}}="Email" → <input type="email"...>
+```
+
+#### Benefits of Template-Based Approach
+
+1. **Consistency**: All workflows use identical UI patterns
+2. **Admin Control**: Change one template, update all workflows
+3. **Validation**: Pre-built, tested validation rules
+4. **Branding**: Components follow company design standards
+5. **Security**: Templates are sanitized and approved
+6. **Performance**: Pre-optimized HTML/CSS/JS
+
+#### Example: Complete Flow
+
+```typescript
+// 1. User says: "I need a feedback form with rating and comments"
+
+// 2. AI analyzes and maps:
+"rating" → Component: "Number Field" or "Rating Stars"
+"comments" → Component: "Long Text Box"
+
+// 3. AI retrieves templates from database:
+const ratingComponent = await getComponent("rating-stars")
+const commentsComponent = await getComponent("long-text-box")
+
+// 4. AI fills templates:
+const ratingHTML = ratingComponent.htmlTemplate
+  .replace("{{label}}", "Satisfaction Rating")
+  .replace("{{min}}", "1")
+  .replace("{{max}}", "5")
+
+const commentsHTML = commentsComponent.htmlTemplate
+  .replace("{{label}}", "Additional Comments")
+  .replace("{{rows}}", "4")
+  .replace("{{placeholder}}", "Please share your feedback...")
+
+// 5. AI generates complete workflow code:
+const fullWorkflowCode = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Feedback Workflow</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <form id="feedbackForm">
+    ${ratingHTML}
+    ${commentsHTML}
+    <button type="submit">Submit Feedback</button>
+  </form>
+  <script src="validation.js"></script>
+</body>
+</html>
+`
+```
+
+#### Storage and Management
+
+- **Templates stored in**: Supabase `component_definitions` table
+- **Managed by**: Admin interface at `/admin/components`
+- **Used by**: AI during workflow generation
+- **Updated**: Changes to templates affect all future workflows
+- **Versioned**: Component updates can be tracked and rolled back
+
 ## AI Intelligence
 
 ### Component Mapper (`component-mapper.ts`)

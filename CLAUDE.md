@@ -426,6 +426,38 @@ Tool Selection     Authorization Flow    100+ Integrations
 
 ---
 
+## 📝 Todo Management Instructions
+
+### At Session Start:
+1. **ALWAYS** use `TodoRead` to check existing todos
+2. If empty, create comprehensive todo list from CLAUDE.md status
+3. Prioritize tasks: high (immediate), medium (next session), low (backlog)
+
+### During Session:
+1. Mark current task as `in_progress` when starting
+2. Only ONE task should be `in_progress` at a time
+3. Mark as `completed` IMMEDIATELY when done
+4. Add new todos as they're discovered
+5. Update priorities as needed
+
+### At Session End:
+1. Review all todos and update statuses
+2. Add any new tasks discovered during session
+3. Update CLAUDE.md with progress update
+4. Leave clear next steps in todo list
+
+### Todo Structure:
+```typescript
+{
+  id: string,          // Unique identifier
+  content: string,     // Clear, actionable description
+  status: 'pending' | 'in_progress' | 'completed',
+  priority: 'high' | 'medium' | 'low'
+}
+```
+
+---
+
 ## 📝 Progress Update Template
 *Copy this section when updating progress:*
 

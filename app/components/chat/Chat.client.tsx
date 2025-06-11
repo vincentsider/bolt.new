@@ -23,6 +23,7 @@ const toastAnimation = cssTransition({
 
 const logger = createScopedLogger('Chat');
 
+
 export function Chat() {
   renderLogger.trace('Chat');
 
@@ -81,6 +82,9 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
 
   const { messages, isLoading, input, handleInputChange, setInput, stop, append } = useChat({
     api: '/api/chat',
+    body: {
+      organizationId: organization?.id,
+    },
     onError: (error) => {
       logger.error('Request failed\n\n', error);
       toast.error('There was an error processing your request');
@@ -161,12 +165,22 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
     const workflowDetection = detectWorkflowIntent(_input);
     
     if (workflowDetection.isWorkflowRequest && workflowDetection.suggestedWorkflow && user && organization) {
-      // Switch to workflow chat mode and process immediately (Bolt.new style)
-      const workflowName = workflowDetection.suggestedWorkflow.name;
-      const encodedInput = encodeURIComponent(_input);
+      // BOLT.NEW PATTERN: Generate workflows within the split-screen interface
+      console.log('🚀 Workflow request detected - generating in workbench...');
       
-      // Navigate to chat builder with immediate processing
-      window.location.href = `/workflows/chat-builder?input=${encodedInput}&name=${encodeURIComponent(workflowName)}&autostart=true`;
+      // Show workbench immediately (Bolt.new pattern)
+      workbenchStore.showWorkbench.set(true);
+      
+      // Start the normal chat flow first to show the conversation
+      runAnimation();
+      
+      // Use the regular chat API but mark it as a workflow request
+      const workflowInput = `[WORKFLOW REQUEST] ${_input}`;
+      append({ role: 'user', content: workflowInput });
+      setInput('');
+      resetEnhancer();
+      textareaRef.current?.blur();
+      
       return;
     }
 

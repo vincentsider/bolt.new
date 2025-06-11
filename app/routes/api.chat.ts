@@ -9,7 +9,42 @@ export async function action(args: ActionFunctionArgs) {
 }
 
 async function chatAction({ context, request }: ActionFunctionArgs) {
-  const { messages } = await request.json<{ messages: Messages }>();
+  const { messages, organizationId } = await request.json<{ messages: Messages; organizationId?: string }>();
+  
+  // Check if this is a workflow request
+  const lastMessage = messages[messages.length - 1];
+  const isWorkflowRequest = lastMessage?.content?.includes('[WORKFLOW REQUEST]') || 
+                           (lastMessage?.content?.toLowerCase().includes('workflow') && 
+                            (lastMessage?.content?.toLowerCase().includes('create') || 
+                             lastMessage?.content?.toLowerCase().includes('build') ||
+                             lastMessage?.content?.toLowerCase().includes('generate')));
+
+  if (isWorkflowRequest) {
+    console.log('🚀 Chat API: Workflow request detected, delegating to workflow API');
+    console.log('🏢 Organization ID:', organizationId);
+    
+    // Clean the message content
+    const cleanedContent = lastMessage.content.replace('[WORKFLOW REQUEST]', '').trim();
+    const workflowMessages = [...messages.slice(0, -1), { ...lastMessage, content: cleanedContent }];
+    
+    // Import and call the workflow API action directly
+    try {
+      const { action: workflowAction } = await import('./api.workflow-chat-v2');
+      const workflowRequest = new Request(request.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          messages: workflowMessages,
+          organizationId 
+        })
+      });
+      
+      return await workflowAction({ context, request: workflowRequest });
+    } catch (error) {
+      console.error('Failed to delegate to workflow API:', error);
+      // Fall back to regular chat
+    }
+  }
 
   const stream = new SwitchableStream();
 

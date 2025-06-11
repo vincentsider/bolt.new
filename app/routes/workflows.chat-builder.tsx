@@ -7,6 +7,8 @@ import { SimpleWorkflowCanvas } from '~/components/workflows/builder/SimpleWorkf
 import { WorkflowChat } from '~/components/workflows/builder/WorkflowChat'
 import { WorkflowStepTabs } from '~/components/workflows/WorkflowStepTabs'
 import type { Node } from 'reactflow'
+import { useStore } from '@nanostores/react'
+import { $componentInstances, $workflowStyling, workflowComponentActions } from '~/stores/workflow-components'
 
 interface BoltStyleCodeViewProps {
   workflowFiles: {[key: string]: string}
@@ -21,12 +23,17 @@ interface WorkflowLivePreviewProps {
 function WorkflowLivePreview({ generatedCode, workflowFiles, workflow }: WorkflowLivePreviewProps) {
   const [htmlContent, setHtmlContent] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
+  const componentInstances = useStore($componentInstances)
 
-  // FIXED: Force live preview updates when content changes
+  // FIXED: Force live preview updates when content OR component instances change
   useEffect(() => {
-    console.log('🔄 LIVE PREVIEW UPDATE: Files changed', Object.keys(workflowFiles).length, 'Code length:', generatedCode.length)
+    console.log('🔄 LIVE PREVIEW UPDATE: Components:', componentInstances.length, 'Files:', Object.keys(workflowFiles).length, 'Code length:', generatedCode.length)
     
-    if (Object.keys(workflowFiles).length > 0) {
+    // Prioritize component instances over generated code
+    if (componentInstances.length > 0) {
+      console.log('🧩 Using component instances for preview')
+      generateComponentBasedPreview()
+    } else if (Object.keys(workflowFiles).length > 0) {
       console.log('📁 Using persistent workflow files for preview')
       generateLivePreview(workflowFiles)
     } else if (generatedCode && generatedCode.length > 100) {
@@ -35,7 +42,27 @@ function WorkflowLivePreview({ generatedCode, workflowFiles, workflow }: Workflo
     } else {
       console.log('⚠️ No substantial content for preview yet')
     }
-  }, [generatedCode, workflowFiles, Object.keys(workflowFiles).length])
+  }, [generatedCode, workflowFiles, Object.keys(workflowFiles).length, componentInstances])
+
+  // NEW: Generate preview from component instances
+  const generateComponentBasedPreview = () => {
+    try {
+      setIsLoading(true)
+      console.log('🧩 Generating component-based preview with', componentInstances.length, 'components')
+      
+      const workflowName = workflow.name || 'Component Workflow'
+      const actionName = extractActionName(workflowName) || 'Submit'
+      
+      const componentHTML = createComponentBasedWorkflowHtml(componentInstances, workflow, actionName)
+      setHtmlContent(componentHTML)
+      
+    } catch (error) {
+      console.error('Error generating component-based preview:', error)
+      setHtmlContent(createErrorHtml())
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const generateLivePreview = (input: string | {[key: string]: string}) => {
     try {
@@ -95,7 +122,277 @@ function WorkflowLivePreview({ generatedCode, workflowFiles, workflow }: Workflo
     return files
   }
 
+  // Helper functions to generate step content
+  const generateStep1Form = (workflow: Partial<Workflow>) => {
+    const workflowName = workflow.name || 'Form'
+    const isFeedback = workflowName.toLowerCase().includes('feedback')
+    
+    if (isFeedback) {
+      return `
+        <div class="container">
+          <h2>📝 Step 1: Feedback Collection</h2>
+          <form id="feedbackForm" class="workflow-form">
+            <div class="form-group">
+              <label for="customerName">Customer Name *</label>
+              <input type="text" id="customerName" name="customerName" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="email">Email Address *</label>
+              <input type="email" id="email" name="email" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="product">Product/Service *</label>
+              <select id="product" name="product" required>
+                <option value="">Select Product/Service</option>
+                <option value="website">Website</option>
+                <option value="app">Mobile App</option>
+                <option value="support">Customer Support</option>
+                <option value="billing">Billing</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="rating">Overall Rating *</label>
+              <select id="rating" name="rating" required>
+                <option value="">Select Rating</option>
+                <option value="5">⭐⭐⭐⭐⭐ Excellent (5)</option>
+                <option value="4">⭐⭐⭐⭐ Good (4)</option>
+                <option value="3">⭐⭐⭐ Average (3)</option>
+                <option value="2">⭐⭐ Poor (2)</option>
+                <option value="1">⭐ Very Poor (1)</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="comments">Feedback Comments *</label>
+              <textarea id="comments" name="comments" rows="4" required placeholder="Please share your detailed feedback..."></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label for="recommend">Would you recommend us to others?</label>
+              <div class="radio-group">
+                <label><input type="radio" name="recommend" value="yes" required> Yes</label>
+                <label><input type="radio" name="recommend" value="no" required> No</label>
+              </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Submit Feedback</button>
+          </form>
+        </div>
+      `
+    }
+    
+    return `
+      <div class="container">
+        <h2>📝 Step 1: Data Collection</h2>
+        <form class="workflow-form">
+          <div class="form-group">
+            <label for="name">Name *</label>
+            <input type="text" id="name" name="name" required>
+          </div>
+          <div class="form-group">
+            <label for="email">Email *</label>
+            <input type="email" id="email" name="email" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+      </div>
+    `
+  }
+
+  const generateStep2Review = (workflow: Partial<Workflow>) => {
+    const workflowName = workflow.name || 'Form'
+    const isFeedback = workflowName.toLowerCase().includes('feedback')
+    
+    if (isFeedback) {
+      return `
+        <div class="container">
+          <h2>👥 Step 2: Team Review</h2>
+          <div class="review-section">
+            <div class="review-item">
+              <h3>Submitted Feedback</h3>
+              <div class="data-display">
+                <p><strong>Customer:</strong> John Smith (john.smith@email.com)</p>
+                <p><strong>Product:</strong> Website</p>
+                <p><strong>Rating:</strong> ⭐⭐⭐⭐ Good (4/5)</p>
+                <p><strong>Comments:</strong> "The website is user-friendly but could use better search functionality. Overall satisfied with the service."</p>
+                <p><strong>Recommendation:</strong> Yes</p>
+                <p><strong>Submitted:</strong> ${new Date().toLocaleDateString()}</p>
+              </div>
+            </div>
+            
+            <div class="review-actions">
+              <h4>Review Decision</h4>
+              <div class="action-buttons">
+                <button class="btn btn-success">✓ Forward to Response Team</button>
+                <button class="btn btn-warning">⚠ Request More Information</button>
+                <button class="btn btn-danger">✗ Mark as Invalid</button>
+              </div>
+              
+              <div class="form-group">
+                <label for="reviewNotes">Review Notes</label>
+                <textarea id="reviewNotes" rows="3" placeholder="Add internal notes about this feedback..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      `
+    }
+    
+    return `
+      <div class="container">
+        <h2>👥 Step 2: Team Review</h2>
+        <p>Review submitted information and make decisions.</p>
+      </div>
+    `
+  }
+
+  const generateStep3Approval = (workflow: Partial<Workflow>) => {
+    const workflowName = workflow.name || 'Form'
+    const isFeedback = workflowName.toLowerCase().includes('feedback')
+    
+    if (isFeedback) {
+      return `
+        <div class="container">
+          <h2>✅ Step 3: Response Approval</h2>
+          <div class="approval-section">
+            <div class="feedback-summary">
+              <h3>Feedback Summary</h3>
+              <div class="summary-card">
+                <p><strong>Customer:</strong> John Smith</p>
+                <p><strong>Rating:</strong> 4/5 stars</p>
+                <p><strong>Issue Type:</strong> Feature Request (Search functionality)</p>
+                <p><strong>Priority:</strong> Medium</p>
+              </div>
+            </div>
+            
+            <div class="response-draft">
+              <h4>Proposed Response</h4>
+              <div class="response-preview">
+                <p>Dear John,</p>
+                <p>Thank you for your valuable feedback about our website. We're pleased to hear you find it user-friendly overall.</p>
+                <p>Regarding the search functionality, we're actively working on improvements and will include your suggestions in our next update planned for next quarter.</p>
+                <p>We appreciate your continued business and recommendation!</p>
+                <p>Best regards,<br>Customer Success Team</p>
+              </div>
+            </div>
+            
+            <div class="approval-actions">
+              <h4>Approval Decision</h4>
+              <div class="action-buttons">
+                <button class="btn btn-success">✓ Approve Response</button>
+                <button class="btn btn-warning">📝 Request Revision</button>
+                <button class="btn btn-danger">✗ Reject</button>
+              </div>
+              
+              <div class="form-group">
+                <label for="approvalComments">Approval Comments</label>
+                <textarea id="approvalComments" rows="2" placeholder="Any specific instructions or feedback..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      `
+    }
+    
+    return `
+      <div class="container">
+        <h2>✅ Step 3: Approval</h2>
+        <p>Final approval and sign-off process.</p>
+      </div>
+    `
+  }
+
+  const generateStep4FollowUp = (workflow: Partial<Workflow>) => {
+    const workflowName = workflow.name || 'Form'
+    const isFeedback = workflowName.toLowerCase().includes('feedback')
+    
+    if (isFeedback) {
+      return `
+        <div class="container">
+          <h2>🔄 Step 4: Follow-up & Integration</h2>
+          <div class="followup-section">
+            <div class="integration-status">
+              <h3>System Integration</h3>
+              <div class="status-list">
+                <div class="status-item completed">
+                  <span class="status-icon">✅</span>
+                  <span>CRM Updated - Customer record enhanced</span>
+                </div>
+                <div class="status-item completed">
+                  <span class="status-icon">✅</span>
+                  <span>Analytics Platform - Feedback logged</span>
+                </div>
+                <div class="status-item completed">
+                  <span class="status-icon">✅</span>
+                  <span>Response Sent - Customer notified</span>
+                </div>
+                <div class="status-item pending">
+                  <span class="status-icon">⏳</span>
+                  <span>Product Team - Feature request logged</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="followup-actions">
+              <h4>Follow-up Actions</h4>
+              <div class="action-list">
+                <div class="action-item">
+                  <input type="checkbox" checked disabled>
+                  <span>Send confirmation email to customer</span>
+                </div>
+                <div class="action-item">
+                  <input type="checkbox" checked disabled>
+                  <span>Update customer satisfaction score</span>
+                </div>
+                <div class="action-item">
+                  <input type="checkbox">
+                  <span>Schedule follow-up call (if rating < 3)</span>
+                </div>
+                <div class="action-item">
+                  <input type="checkbox">
+                  <span>Add to monthly feedback report</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="metrics">
+              <h4>Workflow Metrics</h4>
+              <div class="metrics-grid">
+                <div class="metric">
+                  <div class="metric-value">2.5 hrs</div>
+                  <div class="metric-label">Processing Time</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-value">3</div>
+                  <div class="metric-label">People Involved</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-value">4/5</div>
+                  <div class="metric-label">Customer Rating</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `
+    }
+    
+    return `
+      <div class="container">
+        <h2>🔄 Step 4: Follow-up & Integration</h2>
+        <p>System integration and follow-up actions.</p>
+      </div>
+    `
+  }
+
   const createLiveWorkflowHtml = (indexHtml: string, submitHtml: string, css: string, workflow: Partial<Workflow>) => {
+    // Extract workflow name and make it dynamic
+    const workflowName = workflow.name || 'Workflow'
+    const actionName = extractActionName(workflowName) || 'Submit'
+    
     return `
     <!DOCTYPE html>
     <html lang="en">
@@ -152,6 +449,131 @@ function WorkflowLivePreview({ generatedCode, workflowFiles, workflow }: Workflo
         .tab-content.active {
           display: block;
         }
+        
+        /* Workflow Step Styling */
+        .workflow-form {
+          max-width: 600px;
+          margin: 0 auto;
+        }
+        .form-group {
+          margin-bottom: 20px;
+        }
+        .form-group label {
+          display: block;
+          margin-bottom: 5px;
+          font-weight: 600;
+          color: #333;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+          width: 100%;
+          padding: 10px;
+          border: 2px solid #e1e5e9;
+          border-radius: 6px;
+          font-size: 14px;
+        }
+        .radio-group {
+          display: flex;
+          gap: 20px;
+        }
+        .radio-group label {
+          display: flex;
+          align-items: center;
+          font-weight: normal;
+        }
+        .review-section, .approval-section, .followup-section {
+          max-width: 800px;
+          margin: 0 auto;
+        }
+        .data-display {
+          background: #f8f9fa;
+          padding: 20px;
+          border-radius: 8px;
+          margin: 15px 0;
+          border-left: 4px solid #007bff;
+        }
+        .action-buttons {
+          display: flex;
+          gap: 10px;
+          margin: 15px 0;
+          flex-wrap: wrap;
+        }
+        .btn {
+          padding: 8px 16px;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 500;
+        }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-primary { background: #007bff; color: white; }
+        .summary-card {
+          background: #e3f2fd;
+          padding: 15px;
+          border-radius: 6px;
+          margin: 10px 0;
+        }
+        .response-preview {
+          background: #f1f8e9;
+          padding: 20px;
+          border-radius: 8px;
+          border: 1px solid #c8e6c9;
+          font-style: italic;
+          line-height: 1.6;
+        }
+        .status-list {
+          margin: 15px 0;
+        }
+        .status-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px;
+          margin: 5px 0;
+          background: #f8f9fa;
+          border-radius: 6px;
+        }
+        .status-item.completed {
+          background: #d4edda;
+        }
+        .status-item.pending {
+          background: #fff3cd;
+        }
+        .action-list {
+          margin: 15px 0;
+        }
+        .action-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 8px;
+          margin: 5px 0;
+        }
+        .metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+          gap: 15px;
+          margin: 20px 0;
+        }
+        .metric {
+          text-align: center;
+          padding: 15px;
+          background: #f8f9fa;
+          border-radius: 8px;
+          border: 1px solid #dee2e6;
+        }
+        .metric-value {
+          font-size: 24px;
+          font-weight: bold;
+          color: #007bff;
+        }
+        .metric-label {
+          font-size: 12px;
+          color: #666;
+          margin-top: 5px;
+        }
       </style>
     </head>
     <body>
@@ -163,32 +585,30 @@ function WorkflowLivePreview({ generatedCode, workflowFiles, workflow }: Workflo
       <div class="live-nav">
         <div class="nav-tabs">
           <div class="nav-tab active" onclick="showTab('home')">🏠 Home</div>
-          <div class="nav-tab" onclick="showTab('submit')">📝 Submit Expense</div>
-          <div class="nav-tab" onclick="showTab('dashboard')">👥 Manager Dashboard</div>
+          <div class="nav-tab" onclick="showTab('step1')">📝 Step 1: ${actionName}</div>
+          <div class="nav-tab" onclick="showTab('step2')">👥 Step 2: Team Review</div>
+          <div class="nav-tab" onclick="showTab('step3')">✅ Step 3: Approval</div>
+          <div class="nav-tab" onclick="showTab('step4')">🔄 Step 4: Follow-up</div>
         </div>
         
         <div id="home-tab" class="tab-content active">
           ${indexHtml.replace(/<html[^>]*>|<\/html>|<head>.*?<\/head>|<body[^>]*>|<\/body>/gs, '')}
         </div>
         
-        <div id="submit-tab" class="tab-content">
-          ${submitHtml ? submitHtml.replace(/<html[^>]*>|<\/html>|<head>.*?<\/head>|<body[^>]*>|<\/body>/gs, '') : '<p>Submit form not available in preview</p>'}
+        <div id="step1-tab" class="tab-content">
+          ${submitHtml ? submitHtml.replace(/<html[^>]*>|<\/html>|<head>.*?<\/head>|<body[^>]*>|<\/body>/gs, '') : generateStep1Form(workflow)}
         </div>
         
-        <div id="dashboard-tab" class="tab-content">
-          <div class="container">
-            <h2>Manager Dashboard</h2>
-            <p>This would show pending approvals and workflow management tools.</p>
-            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h3>Sample Pending Approvals</h3>
-              <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #dee2e6; margin: 10px 0;">
-                <strong>John Doe</strong> - $750 Travel Expense
-                <div style="margin-top: 5px; font-size: 14px; color: #666;">
-                  Submitted: Today | Category: Travel
-                </div>
-              </div>
-            </div>
-          </div>
+        <div id="step2-tab" class="tab-content">
+          ${generateStep2Review(workflow)}
+        </div>
+        
+        <div id="step3-tab" class="tab-content">
+          ${generateStep3Approval(workflow)}
+        </div>
+        
+        <div id="step4-tab" class="tab-content">
+          ${generateStep4FollowUp(workflow)}
         </div>
       </div>
 
@@ -299,6 +719,217 @@ function WorkflowLivePreview({ generatedCode, workflowFiles, workflow }: Workflo
   )
 }
 
+// NEW: Create component-based workflow HTML
+function createComponentBasedWorkflowHtml(
+  componentInstances: any[], 
+  workflow: Partial<Workflow>, 
+  actionName: string
+): string {
+  const workflowName = workflow.name || 'Component Workflow'
+  
+  // Group components by step
+  const stepComponents = {
+    capture: componentInstances.filter(c => c.stepType === 'capture'),
+    review: componentInstances.filter(c => c.stepType === 'review'), 
+    approval: componentInstances.filter(c => c.stepType === 'approval'),
+    update: componentInstances.filter(c => c.stepType === 'update')
+  }
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Live Workflow Preview - ${workflowName}</title>
+      <style>
+        body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .live-preview-banner {
+          background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 10px 20px;
+          margin: -20px -20px 20px -20px;
+          font-size: 14px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .live-nav {
+          background: white;
+          border: 1px solid #e1e5e9;
+          border-radius: 8px;
+          padding: 15px;
+          margin-bottom: 20px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .nav-tabs {
+          display: flex;
+          gap: 10px;
+          margin-bottom: 15px;
+        }
+        .nav-tab {
+          padding: 8px 16px;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          background: #f9fafb;
+          cursor: pointer;
+          font-size: 14px;
+          transition: all 0.2s;
+        }
+        .nav-tab.active {
+          background: #3b82f6;
+          color: white;
+          border-color: #3b82f6;
+        }
+        .tab-content {
+          display: none;
+        }
+        .tab-content.active {
+          display: block;
+        }
+        .workflow-step-content {
+          max-width: 600px;
+          margin: 0 auto;
+        }
+        .form-group {
+          margin-bottom: 20px;
+        }
+        .form-group label {
+          display: block;
+          margin-bottom: 5px;
+          font-weight: 600;
+          color: #333;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+          width: 100%;
+          padding: 10px;
+          border: 2px solid #e1e5e9;
+          border-radius: 6px;
+          font-size: 14px;
+        }
+        .btn {
+          padding: 8px 16px;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 500;
+        }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-primary { background: #007bff; color: white; }
+        .button-group {
+          display: flex;
+          gap: 10px;
+          margin: 15px 0;
+        }
+        .approval-actions {
+          text-align: center;
+          padding: 20px;
+          background: #f8f9fa;
+          border-radius: 8px;
+          margin: 20px 0;
+        }
+        .component-placeholder {
+          padding: 20px;
+          background: #f8f9fa;
+          border: 1px dashed #ccc;
+          border-radius: 6px;
+          text-align: center;
+          color: #666;
+          font-style: italic;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="live-preview-banner">
+        <div>🔴 LIVE PREVIEW - ${workflowName}</div>
+        <div>✨ Component-Based Workflow</div>
+      </div>
+      
+      <div class="live-nav">
+        <div class="nav-tabs">
+          <div class="nav-tab active" onclick="showTab('home')">🏠 Home</div>
+          ${stepComponents.capture.length > 0 ? `<div class="nav-tab" onclick="showTab('step1')">📝 Step 1: ${actionName}</div>` : ''}
+          ${stepComponents.review.length > 0 ? `<div class="nav-tab" onclick="showTab('step2')">👥 Step 2: Review</div>` : ''}
+          ${stepComponents.approval.length > 0 ? `<div class="nav-tab" onclick="showTab('step3')">✅ Step 3: Approval</div>` : ''}
+          ${stepComponents.update.length > 0 ? `<div class="nav-tab" onclick="showTab('step4')">🔄 Step 4: Integration</div>` : ''}
+        </div>
+        
+        <div id="home-tab" class="tab-content active">
+          <div class="workflow-step-content">
+            <h2>🏠 ${workflowName} Overview</h2>
+            <p>This workflow consists of ${Object.values(stepComponents).filter(steps => steps.length > 0).length} steps with ${componentInstances.length} total components.</p>
+            
+            <div style="margin: 20px 0;">
+              <h3>Workflow Steps:</h3>
+              <ul>
+                ${stepComponents.capture.length > 0 ? `<li><strong>Step 1: Data Capture</strong> - ${stepComponents.capture.length} components</li>` : ''}
+                ${stepComponents.review.length > 0 ? `<li><strong>Step 2: Review</strong> - ${stepComponents.review.length} components</li>` : ''}
+                ${stepComponents.approval.length > 0 ? `<li><strong>Step 3: Approval</strong> - ${stepComponents.approval.length} components</li>` : ''}
+                ${stepComponents.update.length > 0 ? `<li><strong>Step 4: Integration</strong> - ${stepComponents.update.length} components</li>` : ''}
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        ${stepComponents.capture.length > 0 ? `
+          <div id="step1-tab" class="tab-content">
+            ${workflowComponentActions.generateLivePreviewHTML('capture')}
+          </div>
+        ` : ''}
+        
+        ${stepComponents.review.length > 0 ? `
+          <div id="step2-tab" class="tab-content">
+            ${workflowComponentActions.generateLivePreviewHTML('review')}
+          </div>
+        ` : ''}
+        
+        ${stepComponents.approval.length > 0 ? `
+          <div id="step3-tab" class="tab-content">
+            ${workflowComponentActions.generateLivePreviewHTML('approval')}
+          </div>
+        ` : ''}
+        
+        ${stepComponents.update.length > 0 ? `
+          <div id="step4-tab" class="tab-content">
+            ${workflowComponentActions.generateLivePreviewHTML('update')}
+          </div>
+        ` : ''}
+      </div>
+
+      <script>
+        function showTab(tabName) {
+          // Hide all tabs
+          document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.remove('active');
+          });
+          document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.classList.remove('active');
+          });
+          
+          // Show selected tab
+          document.getElementById(tabName + '-tab').classList.add('active');
+          event.target.classList.add('active');
+        }
+        
+        // Make forms interactive but prevent actual submission
+        document.addEventListener('DOMContentLoaded', function() {
+          const forms = document.querySelectorAll('form');
+          forms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+              e.preventDefault();
+              alert('✅ Form submitted successfully!\\n\\nThis is a component-based preview showing the workflow structure.');
+              return false;
+            });
+          });
+        });
+      </script>
+    </body>
+    </html>
+  `
+}
+
 function BoltStyleCodeView({ workflowFiles }: BoltStyleCodeViewProps) {
   const [files, setFiles] = useState<{[key: string]: string}>({})
   const [fileOrder, setFileOrder] = useState<string[]>([])
@@ -361,6 +992,19 @@ function BoltStyleCodeView({ workflowFiles }: BoltStyleCodeViewProps) {
   )
 }
 
+// Helper function to extract action name from workflow name
+function extractActionName(workflowName: string): string {
+  if (workflowName.toLowerCase().includes('feedback')) return 'Submit Feedback'
+  if (workflowName.toLowerCase().includes('expense')) return 'Submit Expense'
+  if (workflowName.toLowerCase().includes('approval')) return 'Submit Request'
+  if (workflowName.toLowerCase().includes('onboarding')) return 'Start Onboarding'
+  if (workflowName.toLowerCase().includes('review')) return 'Submit Review'
+  
+  // Default pattern
+  const words = workflowName.split(' ')
+  return `Submit ${words[0] || 'Form'}`
+}
+
 export default function ChatWorkflowBuilderPage() {
   const { user, organization, loading: authLoading } = useAuth()
   const [searchParams] = useSearchParams()
@@ -389,6 +1033,29 @@ export default function ChatWorkflowBuilderPage() {
   const [currentView, setCurrentView] = useState<'preview' | 'canvas' | 'code'>('preview')
   const [generatedCode, setGeneratedCode] = useState<string>('')
   const [workflowFiles, setWorkflowFiles] = useState<{[key: string]: string}>({})
+  
+  // Subscribe to component instances and workflow styling for auto-regeneration
+  const componentInstances = useStore($componentInstances)
+  const workflowStyling = useStore($workflowStyling)
+
+  // Auto-regenerate code when component instances or styling changes
+  useEffect(() => {
+    if (componentInstances.length > 0) {
+      console.log('🔄 Component instances changed, auto-regenerating workflow code')
+      try {
+        const { html, css } = workflowComponentActions.regenerateWorkflowCode()
+        setGeneratedCode(html)
+        setWorkflowFiles(prev => ({
+          ...prev,
+          'index.html': html,
+          'style.css': css
+        }))
+        console.log('✅ Auto-regeneration complete')
+      } catch (error) {
+        console.error('❌ Auto-regeneration failed:', error)
+      }
+    }
+  }, [componentInstances, workflowStyling])
 
   // Load workflow if ID is provided
   useEffect(() => {
