@@ -16,17 +16,11 @@ RUN pnpm install --frozen-lockfile
 # Copy application code
 COPY . .
 
-# Build the application
-RUN pnpm run build
-
 # Expose port
 EXPOSE 3000
 
-# Set production environment
-ENV NODE_ENV=production
+# Set development environment for now
+ENV NODE_ENV=development
 
-# Copy server file
-COPY server-simple.cjs .
-
-# Start the application
-CMD ["pnpm", "start:production"]
+# Start the development server
+CMD ["pnpm", "run", "dev", "--host", "0.0.0.0"]
