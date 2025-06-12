@@ -8,8 +8,8 @@
   "type": "module",
   "scripts": {
     "deploy": "npm run build && wrangler pages deploy",
-    "build": "remix vite:build && node scripts/fix-build.js",
-    "build:railway": "NODE_ENV=production remix build",
+    "build": "remix vite:build",
+    "build:railway": "node scripts/build-railway.js",
     "dev": "remix vite:dev",
     "dev:railway": "DANGEROUSLY_DISABLE_HOST_CHECK=true remix vite:dev",
     "test": "vitest --run",

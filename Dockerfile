@@ -16,8 +16,8 @@ RUN pnpm install --frozen-lockfile
 # Copy application code
 COPY . .
 
-# Build the application for production
-RUN pnpm run build
+# Build the application for production (Railway-specific)
+RUN pnpm run build:railway
 
 # Set production environment
 ENV NODE_ENV=production
