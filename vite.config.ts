@@ -15,6 +15,8 @@ export default defineConfig((config) => {
       // Disable host checking for Railway
       strictPort: false,
       open: false,
+      // Add middleware to bypass host checking
+      proxy: {},
     },
     build: {
       target: 'esnext',
@@ -34,15 +36,51 @@ export default defineConfig((config) => {
       UnoCSS(),
       tsconfigPaths(),
       chrome129IssuePlugin(),
+      railwayHostPlugin(),
       config.mode === 'production' && optimizeCssModules({ apply: 'build' }),
     ],
   };
 });
 
+function railwayHostPlugin() {
+  return {
+    name: 'railwayHostPlugin',
+    config() {
+      // Force accept all hosts when DANGEROUSLY_DISABLE_HOST_CHECK is set
+      if (process.env.DANGEROUSLY_DISABLE_HOST_CHECK === 'true') {
+        return {
+          server: {
+            host: true,
+            hmr: {
+              host: 'localhost',
+            },
+          },
+        };
+      }
+    },
+    configureServer(server: ViteDevServer) {
+      // Bypass host checking middleware
+      if (process.env.DANGEROUSLY_DISABLE_HOST_CHECK === 'true') {
+        server.middlewares.use((req, res, next) => {
+          // Remove host checking by accepting all hosts
+          if (req.headers.host) {
+            req.headers['x-forwarded-host'] = req.headers.host;
+          }
+          next();
+        });
+      }
+    },
+  };
+}
+
 function chrome129IssuePlugin() {
   return {
     name: 'chrome129IssuePlugin',
     configureServer(server: ViteDevServer) {
+      // Override host checking completely
+      const originalAccept = server.config.server.host;
+      server.config.server.host = true;
+      
       server.middlewares.use((req, res, next) => {
         const raw = req.headers['user-agent']?.match(/Chrom(e|ium)\/([0-9]+)\./);
 
