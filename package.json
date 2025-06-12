@@ -9,7 +9,7 @@
   "scripts": {
     "deploy": "npm run build && wrangler pages deploy",
     "build": "remix vite:build",
-    "build:railway": "node scripts/build-railway.js",
+    "build:railway": "./scripts/build-for-railway.sh",
     "dev": "remix vite:dev",
     "dev:railway": "DANGEROUSLY_DISABLE_HOST_CHECK=true remix vite:dev",
     "test": "vitest --run",
@@ -97,6 +97,7 @@
     "fast-glob": "^3.3.2",
     "is-ci": "^3.0.1",
     "node-fetch": "^3.3.2",
+    "path-browserify": "^1.0.1",
     "prettier": "^3.3.2",
     "sass-embedded": "^1.89.1",
     "typescript": "^5.5.2",

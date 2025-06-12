@@ -7,6 +7,7 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig((config) => {
   const isRailway = process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
+  const isBuild = config.command === 'build';
   
   return {
     server: {
@@ -25,6 +26,17 @@ export default defineConfig((config) => {
     },
     ssr: {
       noExternal: isRailway ? ['react-dom/server'] : undefined,
+      external: isBuild && isRailway ? [] : undefined,
+    },
+    resolve: {
+      alias: {
+        path: 'path-browserify',
+      },
+    },
+    css: {
+      modules: {
+        localsConvention: 'camelCase',
+      },
     },
     plugins: [
       nodePolyfills({

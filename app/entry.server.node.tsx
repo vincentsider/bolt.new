@@ -1,9 +1,12 @@
 import type { AppLoadContext, EntryContext } from '@remix-run/node';
 import { RemixServer } from '@remix-run/react';
+import { Response } from '@remix-run/node';
 import { isbot } from 'isbot';
 import { renderToPipeableStream } from 'react-dom/server';
 import { PassThrough } from 'stream';
-import { Response } from '@remix-run/node';
+import { renderHeadToString } from 'remix-island';
+import { Head } from './root';
+import { themeStore } from '~/lib/stores/theme';
 
 const ABORT_DELAY = 5000;
 
@@ -37,6 +40,7 @@ function handleBotRequest(
 ) {
   return new Promise((resolve, reject) => {
     let shellRendered = false;
+    const head = renderHeadToString({ request, remixContext, Head });
     const { pipe, abort } = renderToPipeableStream(
       <RemixServer context={remixContext} url={request.url} />,
       {
@@ -45,6 +49,10 @@ function handleBotRequest(
           const body = new PassThrough();
 
           responseHeaders.set('Content-Type', 'text/html');
+          responseHeaders.set('Cross-Origin-Embedder-Policy', 'require-corp');
+          responseHeaders.set('Cross-Origin-Opener-Policy', 'same-origin');
+
+          body.write(`<!DOCTYPE html><html lang="en" data-theme="${themeStore.value}"><head>${head}</head><body><div id="root" class="w-full h-full">`);
 
           resolve(
             new Response(body as any, {
@@ -54,6 +62,7 @@ function handleBotRequest(
           );
 
           pipe(body);
+          body.write(`</div></body></html>`);
         },
         onShellError(error: unknown) {
           reject(error);
@@ -79,6 +88,7 @@ function handleBrowserRequest(
 ) {
   return new Promise((resolve, reject) => {
     let shellRendered = false;
+    const head = renderHeadToString({ request, remixContext, Head });
     const { pipe, abort } = renderToPipeableStream(
       <RemixServer context={remixContext} url={request.url} />,
       {
@@ -87,6 +97,10 @@ function handleBrowserRequest(
           const body = new PassThrough();
 
           responseHeaders.set('Content-Type', 'text/html');
+          responseHeaders.set('Cross-Origin-Embedder-Policy', 'require-corp');
+          responseHeaders.set('Cross-Origin-Opener-Policy', 'same-origin');
+
+          body.write(`<!DOCTYPE html><html lang="en" data-theme="${themeStore.value}"><head>${head}</head><body><div id="root" class="w-full h-full">`);
 
           resolve(
             new Response(body as any, {
@@ -96,6 +110,7 @@ function handleBrowserRequest(
           );
 
           pipe(body);
+          body.write(`</div></body></html>`);
         },
         onShellError(error: unknown) {
           reject(error);
