@@ -12,6 +12,9 @@ export default defineConfig((config) => {
       hmr: {
         port: 443,
       },
+      // Disable host checking for Railway
+      strictPort: false,
+      open: false,
     },
     build: {
       target: 'esnext',
