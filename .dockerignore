@@ -12,3 +12,8 @@ build
 functions
 .wrangler
 .cloudflare
+*.zip
+.railway
+dist
+coverage
+.nyc_output
