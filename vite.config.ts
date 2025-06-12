@@ -6,6 +6,8 @@ import { optimizeCssModules } from 'vite-plugin-optimize-css-modules';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig((config) => {
+  const isRailway = process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
+  
   return {
     server: {
       host: true,
@@ -21,12 +23,16 @@ export default defineConfig((config) => {
     build: {
       target: 'esnext',
     },
+    ssr: {
+      noExternal: isRailway ? ['react-dom/server'] : undefined,
+    },
     plugins: [
       nodePolyfills({
         include: ['path', 'buffer'],
       }),
-      config.mode !== 'test' && remixCloudflareDevProxy(),
+      !isRailway && config.mode !== 'test' && remixCloudflareDevProxy(),
       remixVitePlugin({
+        serverBuildTarget: isRailway ? 'node' : 'cloudflare',
         future: {
           v3_fetcherPersist: true,
           v3_relativeSplatPath: true,

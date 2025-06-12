@@ -16,8 +16,8 @@ RUN pnpm install --frozen-lockfile
 # Copy application code
 COPY . .
 
-# Build the application for production with patch
-RUN pnpm run build:railway && node scripts/patch-build.js
+# Build the application for production
+RUN pnpm run build
 
 # Set production environment
 ENV NODE_ENV=production
@@ -26,4 +26,4 @@ ENV NODE_ENV=production
 EXPOSE 3000
 
 # Start the production server
-CMD ["pnpm", "run", "start:railway"]
+CMD ["node", "server.mjs"]
