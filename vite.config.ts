@@ -25,12 +25,25 @@ export default defineConfig((config) => {
       target: 'esnext',
     },
     ssr: {
-      noExternal: isRailway ? ['react-dom/server'] : undefined,
+      noExternal: isRailway ? ['react-dom/server'] : [
+        '@remix-run/server-runtime',
+        '@remix-run/cloudflare',
+        '@remix-run/node'
+      ],
       external: isBuild && isRailway ? [] : undefined,
+    },
+    optimizeDeps: {
+      include: [
+        '@remix-run/server-runtime',
+        '@remix-run/cloudflare',
+        '@remix-run/node'
+      ],
+      exclude: ['@remix-run/dev']
     },
     resolve: {
       alias: {
         path: 'path-browserify',
+        '@remix-run/server-runtime': '@remix-run/server-runtime/dist/esm/index.js'
       },
     },
     css: {
