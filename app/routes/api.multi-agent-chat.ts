@@ -3,7 +3,7 @@
  * Handles workflow requests using coordinated multi-agent system
  */
 
-import { type ActionFunctionArgs, json } from '@remix-run/cloudflare';
+import { type ActionFunctionArgs, json } from '@remix-run/node';
 import { 
   processWorkflowWithAgents, 
   buildWorkflowWithAgents,

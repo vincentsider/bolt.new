@@ -3,7 +3,7 @@
  * Handles approval/denial of agent execution steps
  */
 
-import { type ActionFunctionArgs, json } from '@remix-run/cloudflare';
+import { type ActionFunctionArgs, json } from '@remix-run/node';
 
 // Simple in-memory store for pending approvals (in production, use Redis or database)
 const pendingApprovals = new Map<string, {

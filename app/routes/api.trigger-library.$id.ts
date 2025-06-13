@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs, type LoaderFunctionArgs, json } from '@remix-run/cloudflare'
+import { type ActionFunctionArgs, type LoaderFunctionArgs, json } from '@remix-run/node'
 import { createClient } from '@supabase/supabase-js'
 import type { UpdateTriggerTemplateRequest } from '~/types/trigger-library'
 

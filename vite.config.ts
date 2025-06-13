@@ -45,7 +45,7 @@ export default defineConfig((config) => {
       !isRailway && config.mode !== 'test' && remixCloudflareDevProxy(),
       remixVitePlugin({
         appDirectory: 'app',
-        serverModuleFormat: 'esm',
+        serverModuleFormat: isRailway ? 'cjs' : 'esm',
         serverBuildFile: 'index.js',
         future: {
           v3_fetcherPersist: true,

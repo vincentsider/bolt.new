@@ -3,7 +3,7 @@
  * Provides endpoints for testing multi-agent coordination in development
  */
 
-import { type ActionFunctionArgs, json } from '@remix-run/cloudflare';
+import { type ActionFunctionArgs, json } from '@remix-run/node';
 import { 
   agentRegistry,
   agentOrchestrator,

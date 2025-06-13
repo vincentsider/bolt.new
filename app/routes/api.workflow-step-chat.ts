@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs, json } from '@remix-run/cloudflare'
+import { type ActionFunctionArgs, json } from '@remix-run/node'
 import { ComponentMapper } from '~/lib/ai/component-mapper'
 import { TriggerMapper } from '~/lib/ai/trigger-mapper'
 import type { WorkflowStep } from '~/types/database'
