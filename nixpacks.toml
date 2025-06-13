@@ -6,9 +6,11 @@ cmds = ["pnpm install --frozen-lockfile"]
 
 [phases.build]
 cmds = [
+  "cp -r app app-backup",
   "cp app/entry.server.node.tsx app/entry.server.tsx",
   "find app -name '*.ts*' -type f -exec sed -i 's/@remix-run\\/cloudflare/@remix-run\\/node/g' {} \\;",
-  "NODE_ENV=production RAILWAY_ENVIRONMENT=production pnpm run build"
+  "NODE_ENV=production RAILWAY_ENVIRONMENT=production pnpm run build",
+  "rm -rf app && mv app-backup app"
 ]
 
 [start]
