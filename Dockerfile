@@ -22,8 +22,8 @@ RUN cp app/entry.server.node.tsx app/entry.server.tsx && \
 # Expose port
 EXPOSE 3000
 
-# Copy test server
-COPY server-test.js ./
+# Copy servers
+COPY server-railway.js ./
 
-# Start the test server
-CMD ["node", "server-test.js"]
+# Start Railway server
+CMD ["node", "server-railway.js"]
