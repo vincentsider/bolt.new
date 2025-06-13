@@ -1,4 +1,4 @@
-import { type LoaderFunctionArgs } from '@remix-run/node'
+import { type LoaderFunctionArgs } from '@remix-run/cloudflare'
 import { useLoaderData } from '@remix-run/react'
 import { useAuth } from '~/components/auth/AuthProvider'
 import { TriggerLibraryManager } from '~/components/admin/TriggerLibraryManager'

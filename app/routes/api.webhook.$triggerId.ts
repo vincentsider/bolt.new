@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs, json } from '@remix-run/node'
+import { type ActionFunctionArgs, json } from '@remix-run/cloudflare'
 import { TriggerEngine } from '~/lib/workflow/trigger-engine'
 
 export async function action({ params, request, context }: ActionFunctionArgs) {

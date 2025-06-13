@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs } from '@remix-run/node';
+import { type ActionFunctionArgs } from '@remix-run/cloudflare';
 
 export async function action({ context, request }: ActionFunctionArgs) {
   // Local type definitions

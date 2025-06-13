@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs, type LoaderFunctionArgs } from '@remix-run/node'
+import { type ActionFunctionArgs, type LoaderFunctionArgs } from '@remix-run/cloudflare'
 import { supabase } from '~/lib/supabase'
 import type { 
   ComponentDefinition, 

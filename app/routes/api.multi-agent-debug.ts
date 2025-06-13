@@ -3,7 +3,7 @@
  * Provides diagnostic information about the multi-agent system
  */
 
-import { type ActionFunctionArgs, json } from '@remix-run/node';
+import { type ActionFunctionArgs, json } from '@remix-run/cloudflare';
 
 export async function action({ context, request }: ActionFunctionArgs) {
   try {

@@ -1,4 +1,4 @@
-import { type LoaderFunctionArgs, json } from '@remix-run/node'
+import { type LoaderFunctionArgs, json } from '@remix-run/cloudflare'
 import { createClient } from '@supabase/supabase-js'
 import type { TriggerStats, TriggerType, TriggerCategory } from '~/types/trigger-library'
 

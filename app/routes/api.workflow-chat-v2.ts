@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs } from '@remix-run/node';
+import { type ActionFunctionArgs } from '@remix-run/cloudflare';
 import { generateWorkflowApplication } from '~/lib/workflow/generators';
 import { ComponentLoader } from '~/lib/.server/component-loader';
 import type { Workflow, WorkflowStep } from '~/types/database';
