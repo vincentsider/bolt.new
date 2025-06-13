@@ -17,7 +17,7 @@ FROM base AS build
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm run build:railway
+RUN NODE_ENV=production pnpm run build
 
 # Production stage
 FROM base AS runtime
@@ -32,4 +32,4 @@ COPY server.mjs ./
 EXPOSE 3000
 
 # Start the production server
-CMD ["node", "server.mjs"]
+CMD ["pnpm", "run", "start:railway"]
