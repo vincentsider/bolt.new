@@ -32,5 +32,5 @@ COPY server-debug.mjs ./
 # Railway sets PORT dynamically
 EXPOSE 3000
 
-# Start the debug server temporarily
-CMD ["node", "server-debug.mjs"]
+# Start the production server
+CMD ["node", "server.mjs"]
