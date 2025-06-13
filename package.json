@@ -17,7 +17,7 @@
     "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
     "lint:fix": "npm run lint -- --fix",
     "start": "bindings=$(./bindings.sh) && wrangler pages dev ./build/client $bindings",
-    "start:production": "NODE_ENV=production remix-serve ./build/server/index.js",
+    "start:production": "NODE_ENV=production node ./build/server/index.js",
     "start:railway": "node server.mjs",
     "typecheck": "tsc",
     "typegen": "wrangler types",

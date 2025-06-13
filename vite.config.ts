@@ -46,7 +46,7 @@ export default defineConfig((config) => {
       remixVitePlugin({
         serverBuildTarget: isRailway ? 'node' : 'cloudflare',
         appDirectory: 'app',
-        serverModuleFormat: isRailway ? 'cjs' : 'esm',
+        serverModuleFormat: 'esm',
         serverBuildFile: isRailway ? 'index.js' : 'index.js',
         serverPlatform: isRailway ? 'node' : 'neutral',
         serverMainFields: isRailway ? ['main', 'module'] : ['browser', 'module', 'main'],
