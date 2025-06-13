@@ -17,7 +17,7 @@ FROM base AS build
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN NODE_ENV=production pnpm run build
+RUN chmod +x scripts/prepare-for-railway.sh && ./scripts/prepare-for-railway.sh && NODE_ENV=production RAILWAY_ENVIRONMENT=production pnpm run build
 
 # Production stage
 FROM base AS runtime
@@ -27,7 +27,6 @@ RUN pnpm install --frozen-lockfile --production
 COPY --from=build /app/build ./build
 COPY --from=build /app/public ./public
 COPY server.mjs ./
-COPY server-debug.mjs ./
 
 # Railway sets PORT dynamically
 EXPOSE 3000
