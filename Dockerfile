@@ -27,9 +27,10 @@ RUN pnpm install --frozen-lockfile --production
 COPY --from=build /app/build ./build
 COPY --from=build /app/public ./public
 COPY server.mjs ./
+COPY server-debug.mjs ./
 
 # Railway sets PORT dynamically
 EXPOSE 3000
 
-# Start the production server
-CMD ["pnpm", "run", "start:railway"]
+# Start the debug server temporarily
+CMD ["node", "server-debug.mjs"]
