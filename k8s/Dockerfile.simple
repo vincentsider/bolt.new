@@ -1,0 +1,11 @@
+FROM node:20-alpine
+WORKDIR /app
+
+# Copy everything
+COPY . .
+
+# Install dependencies
+RUN npm install express compression morgan @remix-run/express
+
+EXPOSE 3000
+CMD ["node", "server-k8s.js"]

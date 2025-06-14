@@ -1,0 +1,11 @@
+FROM node:20-alpine
+WORKDIR /app
+
+# Copy everything
+COPY . .
+
+# Install express
+RUN npm install express
+
+EXPOSE 3000
+CMD ["node", "server-final.cjs"]

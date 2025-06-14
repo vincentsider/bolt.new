@@ -1,4 +1,6 @@
-import { type ActionFunctionArgs, json } from '@remix-run/cloudflare'
+import pkg from '@remix-run/node';
+const { json } = pkg;
+import type { ActionFunctionArgs } from '@remix-run/node'
 import { TriggerEngine } from '~/lib/workflow/trigger-engine'
 
 export async function action({ params, request, context }: ActionFunctionArgs) {
@@ -39,8 +41,8 @@ export async function action({ params, request, context }: ActionFunctionArgs) {
     // Initialize trigger engine
     const engine = new TriggerEngine(
       'webhook-org', // Would get from trigger in real implementation
-      context.cloudflare.env.SUPABASE_URL,
-      context.cloudflare.env.SUPABASE_SERVICE_ROLE_KEY
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     )
     
     // Process webhook

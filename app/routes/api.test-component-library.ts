@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs } from '@remix-run/cloudflare';
+import { type ActionFunctionArgs } from '@remix-run/node';
 import { ComponentLoader } from '~/lib/.server/component-loader';
 
 export async function action({ request }: ActionFunctionArgs) {

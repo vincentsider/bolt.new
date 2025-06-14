@@ -1,4 +1,4 @@
-import { type LoaderFunctionArgs } from '@remix-run/cloudflare'
+import { type LoaderFunctionArgs } from '@remix-run/node'
 import { supabase } from '~/lib/supabase'
 import type { ComponentStats, ComponentGroup } from '~/types/component-library'
 

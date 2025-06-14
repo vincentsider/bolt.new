@@ -1,0 +1,44 @@
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Install pnpm
+RUN corepack enable pnpm
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source
+COPY . .
+
+# Build application
+RUN pnpm run build
+
+# Production stage
+FROM node:20-alpine
+WORKDIR /app
+
+# Install pnpm for production
+RUN corepack enable pnpm
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Install all dependencies (including vite-plugin-node-polyfills)
+RUN pnpm install --frozen-lockfile
+
+# Copy built application
+COPY --from=builder /app/build ./build
+COPY --from=builder /app/server.js ./server.cjs
+COPY --from=builder /app/public ./public
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+USER nodejs
+
+EXPOSE 3000
+
+CMD ["node", "server.cjs"]

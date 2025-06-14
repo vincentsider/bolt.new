@@ -3,7 +3,7 @@ node_modules
 .gitignore
 .env.local
 .env
-build
+# build - removed to include in Docker image
 .cache
 .vscode
 .idea

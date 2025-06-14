@@ -1,0 +1,132 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-config
+  namespace: workflowhub
+data:
+  postgresql.conf: |
+    # Connection settings
+    listen_addresses = '*'
+    max_connections = 200
+    
+    # Memory settings
+    shared_buffers = 256MB
+    effective_cache_size = 1GB
+    maintenance_work_mem = 64MB
+    work_mem = 4MB
+    
+    # WAL settings for replication
+    wal_level = replica
+    max_wal_senders = 10
+    wal_keep_segments = 64
+    hot_standby = on
+    
+    # Logging
+    log_destination = 'stderr'
+    logging_collector = on
+    log_directory = 'pg_log'
+    log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'
+    log_truncate_on_rotation = on
+    log_rotation_age = 1d
+    log_rotation_size = 100MB
+    log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
+    log_checkpoints = on
+    log_connections = on
+    log_disconnections = on
+    log_duration = off
+    log_lock_waits = on
+    log_statement = 'all'
+    
+    # Security
+    ssl = on
+    ssl_cert_file = 'server.crt'
+    ssl_key_file = 'server.key'
+    
+    # Row Level Security
+    row_security = on
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-init
+  namespace: workflowhub
+data:
+  01-init-db.sql: |
+    -- Enable required extensions
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+    CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
+    
+    -- Create audit schema
+    CREATE SCHEMA IF NOT EXISTS audit;
+    
+    -- Create base audit log table (WORM - Write Once Read Many)
+    CREATE TABLE audit.logs (
+      id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+      timestamp TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+      tenant_id UUID NOT NULL,
+      user_id UUID NOT NULL,
+      action VARCHAR(100) NOT NULL,
+      resource_type VARCHAR(100) NOT NULL,
+      resource_id UUID,
+      ip_address INET,
+      user_agent TEXT,
+      request_id UUID,
+      duration_ms INTEGER,
+      status_code INTEGER,
+      error_message TEXT,
+      metadata JSONB,
+      CHECK (timestamp <= NOW()) -- Prevent future-dated entries
+    );
+    
+    -- Make audit log append-only
+    REVOKE UPDATE, DELETE ON audit.logs FROM PUBLIC;
+    REVOKE UPDATE, DELETE ON audit.logs FROM workflowhub_app;
+    
+    -- Create indexes for audit queries
+    CREATE INDEX idx_audit_logs_tenant_timestamp ON audit.logs(tenant_id, timestamp DESC);
+    CREATE INDEX idx_audit_logs_user_timestamp ON audit.logs(user_id, timestamp DESC);
+    CREATE INDEX idx_audit_logs_action_timestamp ON audit.logs(action, timestamp DESC);
+    
+    -- Create partitioning for audit logs (monthly)
+    CREATE TABLE audit.logs_y2024m01 PARTITION OF audit.logs
+      FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
+    
+    -- Enable RLS on all tables
+    ALTER TABLE audit.logs ENABLE ROW LEVEL SECURITY;
+    
+    -- Create application schema
+    CREATE SCHEMA IF NOT EXISTS app;
+    
+    -- Create organizations table
+    CREATE TABLE app.organizations (
+      id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      slug VARCHAR(255) UNIQUE NOT NULL,
+      plan VARCHAR(50) NOT NULL DEFAULT 'starter',
+      settings JSONB DEFAULT '{}',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    -- Create users table
+    CREATE TABLE app.users (
+      id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+      organization_id UUID REFERENCES app.organizations(id),
+      email VARCHAR(255) UNIQUE NOT NULL,
+      role VARCHAR(50) NOT NULL,
+      permissions JSONB DEFAULT '[]',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    -- Enable RLS
+    ALTER TABLE app.organizations ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE app.users ENABLE ROW LEVEL SECURITY;
+    
+    -- Create RLS policies
+    CREATE POLICY tenant_isolation ON app.organizations
+      USING (id = current_setting('app.current_tenant_id')::uuid);
+    
+    CREATE POLICY user_tenant_isolation ON app.users
+      USING (organization_id = current_setting('app.current_tenant_id')::uuid);

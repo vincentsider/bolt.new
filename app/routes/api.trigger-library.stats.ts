@@ -1,4 +1,6 @@
-import { type LoaderFunctionArgs, json } from '@remix-run/cloudflare'
+import pkg from '@remix-run/node';
+const { json } = pkg;
+import type { LoaderFunctionArgs } from '@remix-run/node'
 import { createClient } from '@supabase/supabase-js'
 import type { TriggerStats, TriggerType, TriggerCategory } from '~/types/trigger-library'
 
@@ -11,8 +13,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   }
 
   const supabase = createClient(
-    context.cloudflare.env.SUPABASE_URL,
-    context.cloudflare.env.SUPABASE_SERVICE_ROLE_KEY
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
   )
 
   try {

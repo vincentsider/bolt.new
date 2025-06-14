@@ -1,0 +1,141 @@
+# Production-specific values for workflowhub
+# This overrides values in values.yaml
+
+replicaCount:
+  frontend: 3
+  builderApi: 5
+  workflowEngine: 10
+  authService: 3
+  auditService: 3
+  integrationHub: 3
+
+image:
+  registry: ghcr.io
+  repository: workflowhub/workflowhub
+  tag: "" # Set by CI/CD
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "200"
+    external-dns.alpha.kubernetes.io/hostname: app.workflowhub.io,api.workflowhub.io
+  hosts:
+    - host: app.workflowhub.io
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: api.workflowhub.io
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: workflowhub-tls-prod
+      hosts:
+        - app.workflowhub.io
+        - api.workflowhub.io
+
+postgresql:
+  auth:
+    postgresPassword: "" # Set via sealed secret
+    database: workflowhub_prod
+  primary:
+    persistence:
+      size: 500Gi
+      storageClass: fast-ssd-encrypted
+  readReplicas:
+    replicaCount: 3
+  backup:
+    enabled: true
+    schedule: "0 */6 * * *" # Every 6 hours
+    retention: 90 # 90 days
+
+redis:
+  auth:
+    password: "" # Set via sealed secret
+  master:
+    persistence:
+      size: 50Gi
+      storageClass: fast-ssd
+  replica:
+    replicaCount: 3
+
+elasticsearch:
+  replicas: 5
+  minimumMasterNodes: 3
+  volumeClaimTemplate:
+    resources:
+      requests:
+        storage: 500Gi
+    storageClassName: fast-ssd-encrypted
+
+monitoring:
+  enabled: true
+  prometheus:
+    retention: 90d
+    storage:
+      size: 1Ti
+  grafana:
+    persistence:
+      enabled: true
+      size: 100Gi
+    adminPassword: "" # Set via sealed secret
+
+logging:
+  level: info
+  retention: 2555 # 7 years for compliance
+
+compliance:
+  auditLog:
+    enabled: true
+    retention: 2555
+    immutable: true
+  encryption:
+    keyRotation: 30d # Monthly rotation
+
+resources:
+  frontend:
+    requests:
+      memory: 256Mi
+      cpu: 200m
+    limits:
+      memory: 512Mi
+      cpu: 1000m
+  builderApi:
+    requests:
+      memory: 512Mi
+      cpu: 500m
+    limits:
+      memory: 1Gi
+      cpu: 2000m
+  workflowEngine:
+    requests:
+      memory: 1Gi
+      cpu: 1000m
+    limits:
+      memory: 2Gi
+      cpu: 4000m
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 50
+  targetCPUUtilizationPercentage: 60
+  targetMemoryUtilizationPercentage: 70
+
+# Production secrets (use sealed-secrets or external-secrets-operator)
+secrets:
+  postgresql:
+    existingSecret: postgresql-secret-prod
+  redis:
+    existingSecret: redis-secret-prod
+  jwt:
+    existingSecret: jwt-secret-prod
+  azure:
+    existingSecret: azure-ad-secret-prod
+  arcade:
+    existingSecret: arcade-secret-prod
+  anthropic:
+    existingSecret: anthropic-secret-prod

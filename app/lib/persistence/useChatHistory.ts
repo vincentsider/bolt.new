@@ -15,7 +15,18 @@ export interface ChatHistoryItem {
 
 const persistenceEnabled = !import.meta.env.VITE_DISABLE_PERSISTENCE;
 
-export const db = persistenceEnabled ? await openDatabase() : undefined;
+let db: any = undefined;
+
+// Initialize database asynchronously
+if (persistenceEnabled) {
+  openDatabase().then((database) => {
+    db = database;
+  }).catch((error) => {
+    console.error('Failed to open database:', error);
+  });
+}
+
+export { db };
 
 export const chatId = atom<string | undefined>(undefined);
 export const description = atom<string | undefined>(undefined);

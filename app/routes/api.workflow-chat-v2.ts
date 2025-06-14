@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs } from '@remix-run/cloudflare';
+import { type ActionFunctionArgs } from '@remix-run/node';
 import { generateWorkflowApplication } from '~/lib/workflow/generators';
 import { ComponentLoader } from '~/lib/.server/component-loader';
 import type { Workflow, WorkflowStep } from '~/types/database';
@@ -183,7 +183,7 @@ Make the application fully functional with real database operations, email sendi
         messages.push({ role: 'assistant', content });
         messages.push({ role: 'user', content: CONTINUE_PROMPT });
 
-        const result = await streamWorkflowText(messages, context.cloudflare.env, options);
+        const result = await streamWorkflowText(messages, process.env, options);
         return stream.switchSource(result.toAIStream());
       },
     };
@@ -198,7 +198,7 @@ Make the application fully functional with real database operations, email sendi
     }
 
     console.log('Streaming workflow response with WebContainer context...')
-    const result = await streamWorkflowText(enhancedMessages, context.cloudflare.env, options);
+    const result = await streamWorkflowText(enhancedMessages, process.env, options);
     
     stream.switchSource(result.toAIStream());
     

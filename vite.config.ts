@@ -1,37 +1,35 @@
-import { vitePlugin as remix } from '@remix-run/dev';
-import { cloudflareDevProxyVitePlugin } from '@remix-run/dev';
-import UnoCSS from 'unocss/vite';
-import { defineConfig } from 'vite';
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
-import { optimizeCssModules } from 'vite-plugin-optimize-css-modules';
-import tsconfigPaths from 'vite-tsconfig-paths';
+import { vitePlugin as remix } from "@remix-run/dev";
+import { defineConfig } from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
+import UnoCSS from "unocss/vite";
 
-export default defineConfig((config) => {
-  const isProduction = config.mode === 'production';
-  
-  return {
-    server: {
-      host: true,
-    },
-    build: {
-      target: 'esnext',
-    },
-    plugins: [
-      nodePolyfills({
-        include: ['path', 'buffer'],
-      }),
-      !isProduction && cloudflareDevProxyVitePlugin(),
-      remix({
-        serverModuleFormat: 'esm',
-        future: {
-          v3_fetcherPersist: true,
-          v3_relativeSplatPath: true,
-          v3_throwAbortReason: true,
-        },
-      }),
-      UnoCSS(),
-      tsconfigPaths(),
-      isProduction && optimizeCssModules({ apply: 'build' }),
+export default defineConfig({
+  server: {
+    host: true,
+    port: 5173,
+  },
+  plugins: [
+    nodePolyfills({
+      include: ['path', 'buffer', 'process'],
+    }),
+    remix({
+      serverModuleFormat: 'cjs',
+      serverBuildFile: 'index.js',
+    }),
+    UnoCSS(),
+    tsconfigPaths(),
+  ],
+  build: {
+    target: 'esnext',
+  },
+  ssr: {
+    noExternal: [
+      '@anthropic-ai/sdk',
+      'ai',
+      '@ai-sdk/anthropic',
+      'vite-plugin-node-polyfills',
     ],
-  };
+    external: ['express', 'compression', 'morgan'],
+  },
 });

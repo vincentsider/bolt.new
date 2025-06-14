@@ -1,0 +1,24 @@
+FROM node:20-alpine
+WORKDIR /app
+
+# Copy package files and install
+COPY package*.json ./
+COPY pnpm-lock.yaml ./
+RUN corepack enable pnpm && pnpm install --frozen-lockfile
+
+# Copy everything including build
+COPY . .
+
+# Simple server
+RUN echo 'const express = require("express"); \
+const app = express(); \
+app.use(express.static("build/client")); \
+app.use(express.static("public")); \
+app.get("/health", (req, res) => res.json({status: "ok"})); \
+app.all("*", (req, res) => { \
+  res.sendFile(__dirname + "/build/client/index.html"); \
+}); \
+app.listen(3000, () => console.log("Server on port 3000"));' > simple-server.js
+
+EXPOSE 3000
+CMD ["node", "simple-server.js"]

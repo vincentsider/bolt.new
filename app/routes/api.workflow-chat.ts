@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs } from '@remix-run/cloudflare';
+import { type ActionFunctionArgs } from '@remix-run/node';
 
 export async function action({ context, request }: ActionFunctionArgs) {
   // Local type definitions
@@ -132,14 +132,14 @@ USE THESE COMPONENTS: When generating workflow code, you MUST use these pre-defi
         messages.push({ role: 'user', content: CONTINUE_PROMPT });
 
         // Always use workflow chat for continuation
-        const result = await streamWorkflowText(messages, context.cloudflare.env, options);
+        const result = await streamWorkflowText(messages, process.env, options);
 
         return stream.switchSource(result.toAIStream());
       },
     };
 
     console.log('Using workflow prompt for', isModificationRequest ? 'MODIFICATION request' : 'NEW workflow request', 'with', messages.length, 'messages')
-    console.log('API key available:', !!context.cloudflare.env.ANTHROPIC_API_KEY)
+    console.log('API key available:', !!process.env.ANTHROPIC_API_KEY)
     
     // Include component library context in the last user message
     if (componentLibraryContext && messages.length > 0) {
@@ -150,7 +150,7 @@ USE THESE COMPONENTS: When generating workflow code, you MUST use these pre-defi
     }
     
     // Always use workflow chat - it handles both new workflows and modifications
-    const result = await streamWorkflowText(messages, context.cloudflare.env, options);
+    const result = await streamWorkflowText(messages, process.env, options);
     
     console.log('Stream completed, switching stream source')
 

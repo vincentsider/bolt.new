@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workflowhub-frontend
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: workflowhub-frontend
+  template:
+    metadata:
+      labels:
+        app: workflowhub-frontend
+    spec:
+      containers:
+      - name: workflowhub
+        image: workflowhub-node:latest
+        imagePullPolicy: Never  # Use local image
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3000"
+        - name: SUPABASE_URL
+          value: "https://cbesetqaazrqiqxeofwz.supabase.co"
+        - name: SUPABASE_ANON_KEY
+          value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNiZXNldHFhYXpycWlxeGVvZnd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzM1NTAzNDEsImV4cCI6MjA0OTEyNjM0MX0.1BXs4NOilcqFH0i-3H5BVIGPNvxKz0mSl2LXMcrRaWk"
+        - name: SUPABASE_SERVICE_KEY
+          value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNiZXNldHFhYXpycWlxeGVvZnd6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczMzU1MDM0MSwiZXhwIjoyMDQ5MTI2MzQxfQ.rNLb8AojMxL5B78UM_U0eFrOy88YBdV7D1RKLfKdP4Q"
+        - name: ANTHROPIC_API_KEY
+          value: "sk-ant-api03-t75Vxp6Rc11J7u8n8fT5gWO7cHJnrxo7Yz17v4nJCXYgJaW3T-qLK5sEa4RP-sLPQJJSyaOHG5MFiQ-n5NHVA-CwIdVQAA"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: workflowhub-frontend
+  namespace: default
+spec:
+  selector:
+    app: workflowhub-frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 3000
+  type: NodePort

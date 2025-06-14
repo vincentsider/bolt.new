@@ -1,0 +1,66 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: workflowhub-service
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: workflowhub-service
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: workflowhub-service
+subjects:
+- kind: ServiceAccount
+  name: builder-api
+  namespace: workflowhub
+- kind: ServiceAccount
+  name: workflow-engine
+  namespace: workflowhub
+- kind: ServiceAccount
+  name: auth-service
+  namespace: workflowhub
+- kind: ServiceAccount
+  name: audit-service
+  namespace: workflowhub
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: workflowhub-workflow-executor
+  namespace: workflowhub
+rules:
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["create", "get", "list", "watch", "delete"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch", "delete"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: workflowhub-workflow-executor
+  namespace: workflowhub
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: workflowhub-workflow-executor
+subjects:
+- kind: ServiceAccount
+  name: workflow-engine
+  namespace: workflowhub

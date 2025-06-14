@@ -1,0 +1,229 @@
+# Default values for workflowhub
+replicaCount:
+  frontend: 2
+  builderApi: 3
+  workflowEngine: 5
+  authService: 2
+  auditService: 2
+  integrationHub: 2
+
+image:
+  registry: docker.io
+  repository: workflowhub
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Multi-tenancy configuration
+multiTenancy:
+  enabled: true
+  isolation: strict
+  defaultTenant: default
+
+# Security settings
+security:
+  tls:
+    enabled: true
+    certManager:
+      enabled: true
+      issuer: letsencrypt-prod
+  networkPolicies:
+    enabled: true
+  podSecurityPolicies:
+    enabled: true
+  secrets:
+    provider: kubernetes # or vault, aws-secrets-manager
+    rotation:
+      enabled: true
+      interval: 90d
+
+# Service mesh
+serviceMesh:
+  enabled: true
+  provider: istio # or linkerd
+  mtls:
+    enabled: true
+    mode: STRICT
+
+# Database configuration
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "changeme"
+    database: workflowhub
+  primary:
+    persistence:
+      enabled: true
+      size: 100Gi
+      storageClass: fast-ssd
+  readReplicas:
+    replicaCount: 2
+  metrics:
+    enabled: true
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"
+    retention: 30
+
+# Redis configuration
+redis:
+  enabled: true
+  architecture: replication
+  auth:
+    enabled: true
+    password: "changeme"
+  master:
+    persistence:
+      enabled: true
+      size: 10Gi
+  replica:
+    replicaCount: 2
+
+# Elasticsearch for audit logs
+elasticsearch:
+  enabled: true
+  replicas: 3
+  minimumMasterNodes: 2
+  volumeClaimTemplate:
+    accessModes: ["ReadWriteOnce"]
+    resources:
+      requests:
+        storage: 100Gi
+
+# Authentication service
+keycloak:
+  enabled: true
+  auth:
+    adminUser: admin
+    adminPassword: "changeme"
+  postgresql:
+    enabled: false
+    postgresqlHost: postgresql
+  extraEnvVars:
+    - name: KEYCLOAK_EXTRA_ARGS
+      value: "-Dkeycloak.profile.feature.upload_scripts=enabled"
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  hosts:
+    - host: app.workflowhub.io
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: workflowhub-tls
+      hosts:
+        - app.workflowhub.io
+
+# Resource limits
+resources:
+  frontend:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 500m
+  builderApi:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 1000m
+  workflowEngine:
+    requests:
+      memory: 512Mi
+      cpu: 500m
+    limits:
+      memory: 1Gi
+      cpu: 2000m
+
+# Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Monitoring
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+  grafana:
+    enabled: true
+    dashboards:
+      enabled: true
+
+# Logging
+logging:
+  enabled: true
+  level: info
+  format: json
+  output: stdout
+  aggregator: fluentbit # or fluentd
+  destination: elasticsearch
+
+# Compliance
+compliance:
+  auditLog:
+    enabled: true
+    retention: 2555 # 7 years in days
+    immutable: true
+  dataClassification:
+    enabled: true
+    scanInterval: 24h
+  encryption:
+    atRest: true
+    inTransit: true
+    keyRotation: 90d
+
+# AI Services
+ai:
+  provider: anthropic
+  model: claude-3-opus
+  temperature: 0.7
+  maxTokens: 4096
+  
+# Integration settings
+integrations:
+  arcade:
+    enabled: true
+    apiKey: "" # Set via secret
+  sharepoint:
+    enabled: true
+  azure:
+    enabled: true
+    tenantId: ""
+    clientId: ""
+
+# Environment-specific overrides
+environments:
+  production:
+    replicas:
+      multiplier: 1.0
+    resources:
+      multiplier: 1.0
+  staging:
+    replicas:
+      multiplier: 0.5
+    resources:
+      multiplier: 0.5
+  development:
+    replicas:
+      multiplier: 0.25
+    resources:
+      multiplier: 0.25

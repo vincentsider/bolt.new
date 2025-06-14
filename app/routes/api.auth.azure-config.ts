@@ -1,5 +1,6 @@
-import type { LoaderFunctionArgs } from '@remix-run/cloudflare'
-import { json } from '@remix-run/cloudflare'
+import type { LoaderFunctionArgs } from '@remix-run/node'
+import pkg from '@remix-run/node';
+const { json } = pkg;
 import { supabase } from '~/lib/supabase'
 
 export async function loader({ request }: LoaderFunctionArgs) {

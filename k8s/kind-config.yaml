@@ -1,0 +1,57 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: workflowhub
+nodes:
+# Control plane node
+- role: control-plane
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "ingress-ready=true"
+  extraPortMappings:
+  # HTTP
+  - containerPort: 80
+    hostPort: 80
+    protocol: TCP
+  # HTTPS
+  - containerPort: 443
+    hostPort: 443
+    protocol: TCP
+  # Metrics
+  - containerPort: 30001
+    hostPort: 30001
+    protocol: TCP
+  # PostgreSQL (for local dev)
+  - containerPort: 30432
+    hostPort: 5432
+    protocol: TCP
+  # Redis (for local dev)
+  - containerPort: 30379
+    hostPort: 6379
+    protocol: TCP
+# Worker nodes
+- role: worker
+  extraMounts:
+  - hostPath: /tmp/workflowhub
+    containerPath: /data
+- role: worker
+  extraMounts:
+  - hostPath: /tmp/workflowhub
+    containerPath: /data
+- role: worker
+  extraMounts:
+  - hostPath: /tmp/workflowhub
+    containerPath: /data
+# Feature gates and runtime config
+featureGates:
+  EphemeralContainers: true
+  GenericEphemeralVolume: true
+networking:
+  podSubnet: "10.244.0.0/16"
+  serviceSubnet: "10.96.0.0/12"
+containerdConfigPatches:
+- |-
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5000"]
+    endpoint = ["http://kind-registry:5000"]

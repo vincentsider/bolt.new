@@ -1,0 +1,19 @@
+FROM node:20-alpine
+WORKDIR /app
+
+# Copy package files first
+COPY package*.json ./
+COPY pnpm-lock.yaml ./
+
+# Install pnpm and dependencies
+RUN corepack enable pnpm && pnpm install --frozen-lockfile
+
+# Copy the build directory and server file
+COPY build ./build
+COPY public ./public
+COPY server-final.cjs ./
+
+# Express is already installed via pnpm
+
+EXPOSE 3000
+CMD ["node", "server-final.cjs"]

@@ -1,0 +1,121 @@
+# Staging-specific values for workflowhub
+# This overrides values in values.yaml
+
+replicaCount:
+  frontend: 1
+  builderApi: 2
+  workflowEngine: 3
+  authService: 1
+  auditService: 1
+  integrationHub: 1
+
+image:
+  registry: ghcr.io
+  repository: workflowhub/workflowhub
+  tag: "" # Set by CI/CD
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: staging.workflowhub.io
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: workflowhub-tls-staging
+      hosts:
+        - staging.workflowhub.io
+
+postgresql:
+  auth:
+    postgresPassword: "" # Set via sealed secret
+    database: workflowhub_staging
+  primary:
+    persistence:
+      size: 50Gi
+      storageClass: standard
+  readReplicas:
+    replicaCount: 1
+  backup:
+    enabled: true
+    schedule: "0 2 * * *" # Daily at 2 AM
+    retention: 7 # 7 days
+
+redis:
+  auth:
+    password: "" # Set via sealed secret
+  master:
+    persistence:
+      size: 5Gi
+      storageClass: standard
+  replica:
+    replicaCount: 1
+
+elasticsearch:
+  replicas: 1
+  minimumMasterNodes: 1
+  volumeClaimTemplate:
+    resources:
+      requests:
+        storage: 50Gi
+    storageClassName: standard
+
+monitoring:
+  enabled: true
+  prometheus:
+    retention: 7d
+    storage:
+      size: 50Gi
+  grafana:
+    persistence:
+      enabled: true
+      size: 10Gi
+
+logging:
+  level: debug
+  retention: 30 # 30 days
+
+resources:
+  frontend:
+    requests:
+      memory: 128Mi
+      cpu: 50m
+    limits:
+      memory: 256Mi
+      cpu: 200m
+  builderApi:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+  workflowEngine:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 1Gi
+      cpu: 1000m
+
+autoscaling:
+  enabled: false # Disabled for staging
+
+# Staging secrets
+secrets:
+  postgresql:
+    existingSecret: postgresql-secret-staging
+  redis:
+    existingSecret: redis-secret-staging
+  jwt:
+    existingSecret: jwt-secret-staging
+  azure:
+    existingSecret: azure-ad-secret-staging
+  arcade:
+    existingSecret: arcade-secret-staging
+  anthropic:
+    existingSecret: anthropic-secret-staging

@@ -1,4 +1,6 @@
-import { type ActionFunctionArgs, json } from '@remix-run/cloudflare';
+import pkg from '@remix-run/node';
+const { json } = pkg;
+import type { ActionFunctionArgs } from '@remix-run/node';
 import { persistWorkflow } from '~/lib/.server/workflow-persistence';
 
 export async function action({ request, context }: ActionFunctionArgs) {
